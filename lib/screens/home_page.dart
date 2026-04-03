@@ -199,20 +199,23 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           const Divider(),
-          ListTile(
-            leading: const Icon(Icons.settings),
-            title: const Text('Settings'),
-            onTap: () {
-              Navigator.of(context).pop();
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => SettingsPage(
-                    currentThemeMode: widget.themeMode,
-                    onThemeModeChanged: widget.onThemeModeChanged,
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: ListTile(
+              leading: const Icon(Icons.settings),
+              title: const Text('Settings'),
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => SettingsPage(
+                      currentThemeMode: widget.themeMode,
+                      onThemeModeChanged: widget.onThemeModeChanged,
+                    ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -248,6 +251,7 @@ class _HomePageState extends State<HomePage> {
             onReset: _reset,
           ),
           const SizedBox(height: 24),
+          const SizedBox(height: 16),
         ],
       ),
     );
