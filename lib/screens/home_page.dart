@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
+import '../services/url_launcher_service.dart';
 import '../widgets/counter_controls.dart';
+import '../widgets/counter_drawer.dart';
 import 'settings_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -140,18 +141,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _openDonateUrl() async {
-    const url =
-        'https://www.paypal.com/donate/?hosted_button_id=YOUR_BUTTON_ID';
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Spenden-URL konnte nicht geöffnet werden.'),
-        ),
-      );
-    }
+    await UrlLauncherService.openDonateUrl(context);
   }
 
   AppBar _buildAppBar() {
@@ -168,57 +158,25 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildDrawer() {
-    return Drawer(
-      child: Column(
-        children: [
-          Expanded(
-            child: ListView(
-              children: [
-                ...counters.keys.map((String counter) {
-                  return ListTile(
-                    title: Text(counter),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.edit),
-                      onPressed: () => _showRenameCounterDialog(counter),
-                    ),
-                    onTap: () {
-                      _selectCounter(counter);
-                      Navigator.of(context).pop();
-                    },
-                  );
-                }).toList(),
-                ListTile(
-                  leading: const Icon(Icons.add),
-                  title: const Text('New Counter'),
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    _showAddCounterDialog();
-                  },
-                ),
-              ],
+    return CounterDrawer(
+      counters: counters,
+      onAddNewCounter: _showAddCounterDialog,
+      onSelectCounter: (counter) {
+        _selectCounter(counter);
+      },
+      onRenameCounter: (counter) {
+        _showRenameCounterDialog(counter);
+      },
+      onOpenSettings: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => SettingsPage(
+              currentThemeMode: widget.themeMode,
+              onThemeModeChanged: widget.onThemeModeChanged,
             ),
           ),
-          const Divider(),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: ListTile(
-              leading: const Icon(Icons.settings),
-              title: const Text('Settings'),
-              onTap: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => SettingsPage(
-                      currentThemeMode: widget.themeMode,
-                      onThemeModeChanged: widget.onThemeModeChanged,
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
