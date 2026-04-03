@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../widgets/counter_controls.dart';
+import 'settings_page.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  final ThemeMode themeMode;
+  final ValueChanged<ThemeMode> onThemeModeChanged;
+
+  const HomePage({
+    super.key,
+    required this.themeMode,
+    required this.onThemeModeChanged,
+  });
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -45,19 +53,19 @@ class _HomePageState extends State<HomePage> {
       builder: (BuildContext context) {
         String newCounterName = '';
         return AlertDialog(
-          title: const Text('Neuen Counter hinzufügen'),
+          title: const Text('Add Counter'),
           content: TextField(
             onChanged: (value) {
               newCounterName = value;
             },
-            decoration: const InputDecoration(hintText: 'Name des Counters'),
+            decoration: const InputDecoration(hintText: 'Counter name'),
           ),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: const Text('Abbrechen'),
+              child: const Text('Cancel'),
             ),
             TextButton(
               onPressed: () {
@@ -69,7 +77,7 @@ class _HomePageState extends State<HomePage> {
                 }
                 Navigator.of(context).pop();
               },
-              child: const Text('Hinzufügen'),
+              child: const Text('Add'),
             ),
           ],
         );
@@ -83,22 +91,20 @@ class _HomePageState extends State<HomePage> {
       builder: (BuildContext context) {
         String newCounterName = oldName;
         return AlertDialog(
-          title: const Text('Counter umbenennen'),
+          title: const Text('Rename Counter'),
           content: TextField(
             controller: TextEditingController(text: oldName),
             onChanged: (value) {
               newCounterName = value;
             },
-            decoration: const InputDecoration(
-              hintText: 'Neuer Name des Counters',
-            ),
+            decoration: const InputDecoration(hintText: 'New counter name'),
           ),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: const Text('Abbrechen'),
+              child: const Text('Cancel'),
             ),
             TextButton(
               onPressed: () {
@@ -115,7 +121,7 @@ class _HomePageState extends State<HomePage> {
                 }
                 Navigator.of(context).pop();
               },
-              child: const Text('Umbenennen'),
+              child: const Text('Rename'),
             ),
           ],
         );
@@ -152,31 +158,49 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
       drawer: Drawer(
-        child: ListView(
+        child: Column(
           children: [
-            const DrawerHeader(
-              decoration: BoxDecoration(color: Colors.deepPurple),
-              child: SizedBox.shrink(),
+            Expanded(
+              child: ListView(
+                children: [
+                  ...counters.keys.map((String counter) {
+                    return ListTile(
+                      title: Text(counter),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.edit),
+                        onPressed: () => _editCounter(counter),
+                      ),
+                      onTap: () {
+                        _selectCounter(counter);
+                        Navigator.of(context).pop();
+                      },
+                    );
+                  }).toList(),
+                  ListTile(
+                    leading: const Icon(Icons.add),
+                    title: const Text('New Counter'),
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      _addCounter();
+                    },
+                  ),
+                ],
+              ),
             ),
-            ...counters.keys.map((String counter) {
-              return ListTile(
-                title: Text(counter),
-                trailing: IconButton(
-                  icon: const Icon(Icons.edit),
-                  onPressed: () => _editCounter(counter),
-                ),
-                onTap: () {
-                  _selectCounter(counter);
-                  Navigator.of(context).pop();
-                },
-              );
-            }).toList(),
+            const Divider(),
             ListTile(
-              leading: const Icon(Icons.add),
-              title: const Text('Neuer Counter'),
+              leading: const Icon(Icons.settings),
+              title: const Text('Settings'),
               onTap: () {
                 Navigator.of(context).pop();
-                _addCounter();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => SettingsPage(
+                      currentThemeMode: widget.themeMode,
+                      onThemeModeChanged: widget.onThemeModeChanged,
+                    ),
+                  ),
+                );
               },
             ),
           ],
