@@ -47,7 +47,28 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  void _addCounter() {
+  bool _isCounterNameValid(String counterName) {
+    return counterName.isNotEmpty && !counters.containsKey(counterName);
+  }
+
+  void _addCounterToList(String counterName) {
+    setState(() {
+      counters[counterName] = 0;
+    });
+  }
+
+  void _renameCounter(String oldName, String newName) {
+    setState(() {
+      final value = counters[oldName]!;
+      counters.remove(oldName);
+      counters[newName] = value;
+      if (currentCounter == oldName) {
+        currentCounter = newName;
+      }
+    });
+  }
+
+  void _showAddCounterDialog() {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -69,11 +90,8 @@ class _HomePageState extends State<HomePage> {
             ),
             TextButton(
               onPressed: () {
-                if (newCounterName.isNotEmpty &&
-                    !counters.containsKey(newCounterName)) {
-                  setState(() {
-                    counters[newCounterName] = 0;
-                  });
+                if (_isCounterNameValid(newCounterName)) {
+                  _addCounterToList(newCounterName);
                 }
                 Navigator.of(context).pop();
               },
@@ -85,7 +103,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void _editCounter(String oldName) {
+  void _showRenameCounterDialog(String oldName) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -108,16 +126,8 @@ class _HomePageState extends State<HomePage> {
             ),
             TextButton(
               onPressed: () {
-                if (newCounterName.isNotEmpty &&
-                    !counters.containsKey(newCounterName)) {
-                  setState(() {
-                    int value = counters[oldName]!;
-                    counters.remove(oldName);
-                    counters[newCounterName] = value;
-                    if (currentCounter == oldName) {
-                      currentCounter = newCounterName;
-                    }
-                  });
+                if (_isCounterNameValid(newCounterName)) {
+                  _renameCounter(oldName, newCounterName);
                 }
                 Navigator.of(context).pop();
               },
@@ -144,99 +154,111 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        // Titel in der AppBar entfernt, nur Spenden-Icon bleibt
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.favorite),
-            onPressed: _openDonateUrl,
-            tooltip: 'Spenden',
+  AppBar _buildAppBar() {
+    return AppBar(
+      // Only donation button, no title
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.favorite),
+          onPressed: _openDonateUrl,
+          tooltip: 'Donate',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDrawer() {
+    return Drawer(
+      child: Column(
+        children: [
+          Expanded(
+            child: ListView(
+              children: [
+                ...counters.keys.map((String counter) {
+                  return ListTile(
+                    title: Text(counter),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.edit),
+                      onPressed: () => _showRenameCounterDialog(counter),
+                    ),
+                    onTap: () {
+                      _selectCounter(counter);
+                      Navigator.of(context).pop();
+                    },
+                  );
+                }).toList(),
+                ListTile(
+                  leading: const Icon(Icons.add),
+                  title: const Text('New Counter'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _showAddCounterDialog();
+                  },
+                ),
+              ],
+            ),
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.settings),
+            title: const Text('Settings'),
+            onTap: () {
+              Navigator.of(context).pop();
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => SettingsPage(
+                    currentThemeMode: widget.themeMode,
+                    onThemeModeChanged: widget.onThemeModeChanged,
+                  ),
+                ),
+              );
+            },
           ),
         ],
       ),
-      drawer: Drawer(
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView(
-                children: [
-                  ...counters.keys.map((String counter) {
-                    return ListTile(
-                      title: Text(counter),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.edit),
-                        onPressed: () => _editCounter(counter),
-                      ),
-                      onTap: () {
-                        _selectCounter(counter);
-                        Navigator.of(context).pop();
-                      },
-                    );
-                  }).toList(),
-                  ListTile(
-                    leading: const Icon(Icons.add),
-                    title: const Text('New Counter'),
-                    onTap: () {
-                      Navigator.of(context).pop();
-                      _addCounter();
-                    },
-                  ),
-                ],
-              ),
-            ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.settings),
-              title: const Text('Settings'),
-              onTap: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => SettingsPage(
-                      currentThemeMode: widget.themeMode,
-                      onThemeModeChanged: widget.onThemeModeChanged,
-                    ),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            const SizedBox(height: 24),
-            Text(
-              currentCounter,
-              style: const TextStyle(fontSize: 42, fontWeight: FontWeight.bold),
-            ),
-            Expanded(
-              child: Center(
-                child: Text(
-                  '${counters[currentCounter]}',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 96,
-                    fontWeight: FontWeight.w900,
-                  ),
+    );
+  }
+
+  Widget _buildBody() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const SizedBox(height: 24),
+          Text(
+            currentCounter,
+            style: const TextStyle(fontSize: 42, fontWeight: FontWeight.bold),
+          ),
+          Expanded(
+            child: Center(
+              child: Text(
+                '${counters[currentCounter]}',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 96,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
             ),
-            CounterControls(
-              onIncrement: _increment,
-              onDecrement: _decrement,
-              onReset: _reset,
-            ),
-            const SizedBox(height: 24),
-          ],
-        ),
+          ),
+          CounterControls(
+            onIncrement: _increment,
+            onDecrement: _decrement,
+            onReset: _reset,
+          ),
+          const SizedBox(height: 24),
+        ],
       ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: _buildAppBar(),
+      drawer: _buildDrawer(),
+      body: _buildBody(),
     );
   }
 }
