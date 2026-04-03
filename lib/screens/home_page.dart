@@ -187,23 +187,29 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const SizedBox(height: 36),
+            const SizedBox(height: 24),
             Text(
               currentCounter,
               style: const TextStyle(fontSize: 42, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 16),
-            Text(
-              '${counters[currentCounter]}',
-              style: Theme.of(context).textTheme.displaySmall,
+            Expanded(
+              child: Center(
+                child: Text(
+                  '${counters[currentCounter]}',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 96,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
             ),
-            const Spacer(),
             CounterControls(
               onIncrement: _increment,
               onDecrement: _decrement,
               onReset: _reset,
             ),
-            const SizedBox(height: 40),
+            const SizedBox(height: 24),
           ],
         ),
       ),
