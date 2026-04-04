@@ -16,8 +16,12 @@ class CounterStorageService {
   static const String _countersKey = 'counters';
   static const String _currentCounterKey = 'current_counter';
 
-  static const Map<String, int> defaultCounters = {'Zigaretten': 0};
-  static const String defaultCurrentCounter = 'Zigaretten';
+  static const Map<String, int> defaultCounters = {
+    'Workout streak': 0,
+    'Days without smoking': 0,
+    'Days till my next holidays': 100,
+  };
+  static const String defaultCurrentCounter = 'Workout streak';
 
   static Future<CounterStorageData> load() async {
     final prefs = await SharedPreferences.getInstance();

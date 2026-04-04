@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../services/counter_storage_service.dart';
-import '../services/url_launcher_service.dart';
 import '../widgets/counter_controls.dart';
 import '../widgets/counter_drawer.dart';
 import 'settings_page.dart';
@@ -177,21 +176,8 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Future<void> _openDonateUrl() async {
-    await UrlLauncherService.openDonateUrl(context);
-  }
-
   AppBar _buildAppBar() {
-    return AppBar(
-      // Only donation button, no title
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.favorite),
-          onPressed: _openDonateUrl,
-          tooltip: 'Donate',
-        ),
-      ],
-    );
+    return AppBar();
   }
 
   Widget _buildDrawer() {
@@ -230,6 +216,7 @@ class _HomePageState extends State<HomePage> {
           const SizedBox(height: 24),
           Text(
             currentCounter,
+            textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 42, fontWeight: FontWeight.bold),
           ),
           Expanded(
