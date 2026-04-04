@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/counter_storage_service.dart';
+import '../services/url_launcher_service.dart';
 import '../widgets/counter_controls.dart';
 import '../widgets/counter_drawer.dart';
 import 'settings_page.dart';
@@ -105,6 +106,23 @@ class _HomePageState extends State<HomePage> {
     _saveCounters();
   }
 
+  void _deleteCounter(String counterName) {
+    if (counters.length <= 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('At least one counter must remain.')),
+      );
+      return;
+    }
+
+    setState(() {
+      counters.remove(counterName);
+      if (currentCounter == counterName) {
+        currentCounter = counters.keys.first;
+      }
+    });
+    _saveCounters();
+  }
+
   void _showAddCounterDialog() {
     showDialog(
       context: context,
@@ -176,8 +194,50 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  void _showDeleteCounterDialog(String counterName) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete Counter'),
+          content: Text('Do you really want to delete "$counterName"?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                _deleteCounter(counterName);
+                Navigator.of(context).pop();
+              },
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _openDonateUrl() async {
+    await UrlLauncherService.openDonateUrl(context);
+  }
+
   AppBar _buildAppBar() {
-    return AppBar();
+    return AppBar(
+      actions: [
+        Padding(
+          padding: const EdgeInsets.only(right: 8),
+          child: IconButton(
+            icon: const Icon(Icons.favorite),
+            onPressed: _openDonateUrl,
+            tooltip: 'Donate',
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildDrawer() {
@@ -189,6 +249,9 @@ class _HomePageState extends State<HomePage> {
       },
       onRenameCounter: (counter) {
         _showRenameCounterDialog(counter);
+      },
+      onDeleteCounter: (counter) {
+        _showDeleteCounterDialog(counter);
       },
       onOpenSettings: () {
         Navigator.of(context).push(

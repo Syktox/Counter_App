@@ -68,7 +68,10 @@ ios/Flutter/Flutter.framework
 ios/Flutter/Flutter.podspec
 ios/Flutter/Generated.xcconfig
 ios/Flutter/flutter_export_environment.sh
+ios/Flutter/ephemeral/
 ios/Pods/
+ios/Podfile
+ios/Podfile.lock
 *.mobileprovision
 ios/Runner/Assets.xcassets/AppIcon.appiconset/
 ios/build/
@@ -79,6 +82,14 @@ linux/build/
 # macOS related
 macos/build/
 macos/Runner/Assets.xcassets/AppIcon.appiconset/
+macos/Flutter/ephemeral/
+macos/Podfile
+macos/Podfile.lock
+
+# Xcode user-specific
+**/*.xcworkspace/xcuserdata/
+**/*.xcodeproj/xcuserdata/
+*.xcuserstate
 
 # Windows related
 windows/build/

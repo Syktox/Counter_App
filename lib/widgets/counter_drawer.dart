@@ -7,6 +7,7 @@ class CounterDrawer extends StatelessWidget {
   final VoidCallback onAddNewCounter;
   final CounterNameCallback onSelectCounter;
   final CounterNameCallback onRenameCounter;
+  final CounterNameCallback onDeleteCounter;
   final VoidCallback onOpenSettings;
 
   const CounterDrawer({
@@ -15,16 +16,27 @@ class CounterDrawer extends StatelessWidget {
     required this.onAddNewCounter,
     required this.onSelectCounter,
     required this.onRenameCounter,
+    required this.onDeleteCounter,
     required this.onOpenSettings,
   });
 
   Widget _buildCounterTile(BuildContext context, String counter) {
     return ListTile(
       title: Text(counter),
-      trailing: IconButton(
-        icon: const Icon(Icons.edit),
-        onPressed: () => onRenameCounter(counter),
-        tooltip: 'Rename counter',
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: () => onRenameCounter(counter),
+            tooltip: 'Rename counter',
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline),
+            onPressed: () => onDeleteCounter(counter),
+            tooltip: 'Delete counter',
+          ),
+        ],
       ),
       onTap: () {
         onSelectCounter(counter);
