@@ -1,4 +1,4 @@
-package com.example.flutter_tes
+package com.example.counter_app
 
 import io.flutter.embedding.android.FlutterActivity
 

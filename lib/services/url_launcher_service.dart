@@ -10,8 +10,17 @@ class UrlLauncherService {
   static Future<void> openDonateUrl(BuildContext context) async {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     final uri = Uri.parse(donateUrl);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
+
+    final openedInExternalApp = await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication,
+    );
+    if (openedInExternalApp) {
+      return;
+    }
+
+    final openedWithDefaultMode = await launchUrl(uri);
+    if (openedWithDefaultMode) {
       return;
     }
 
