@@ -5,7 +5,7 @@ class UrlLauncherService {
   UrlLauncherService._();
 
   static const donateUrl =
-      'https://www.paypal.com/donate/?hosted_button_id=YOUR_BUTTON_ID';
+      'https://buymeacoffee.com/syktox';
 
   static Future<void> openDonateUrl(BuildContext context) async {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
