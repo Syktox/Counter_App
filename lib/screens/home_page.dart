@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/counter_storage_service.dart';
 import '../services/url_launcher_service.dart';
 import '../widgets/counter_controls.dart';
 import '../widgets/counter_drawer.dart';
@@ -19,13 +20,43 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  Map<String, int> counters = {'Zigaretten': 0};
-  String currentCounter = 'Zigaretten';
+  Map<String, int> counters = Map<String, int>.from(
+    CounterStorageService.defaultCounters,
+  );
+  String currentCounter = CounterStorageService.defaultCurrentCounter;
+  bool _isLoadingCounters = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCounters();
+  }
+
+  Future<void> _loadCounters() async {
+    final storedData = await CounterStorageService.load();
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      counters = storedData.counters;
+      currentCounter = storedData.currentCounter;
+      _isLoadingCounters = false;
+    });
+  }
+
+  Future<void> _saveCounters() {
+    return CounterStorageService.save(
+      counters: counters,
+      currentCounter: currentCounter,
+    );
+  }
 
   void _increment() {
     setState(() {
       counters[currentCounter] = counters[currentCounter]! + 1;
     });
+    _saveCounters();
   }
 
   void _decrement() {
@@ -34,18 +65,21 @@ class _HomePageState extends State<HomePage> {
         counters[currentCounter] = counters[currentCounter]! - 1;
       }
     });
+    _saveCounters();
   }
 
   void _reset() {
     setState(() {
       counters[currentCounter] = 0;
     });
+    _saveCounters();
   }
 
   void _selectCounter(String counter) {
     setState(() {
       currentCounter = counter;
     });
+    _saveCounters();
   }
 
   bool _isCounterNameValid(String counterName) {
@@ -55,7 +89,9 @@ class _HomePageState extends State<HomePage> {
   void _addCounterToList(String counterName) {
     setState(() {
       counters[counterName] = 0;
+      currentCounter = counterName;
     });
+    _saveCounters();
   }
 
   void _renameCounter(String oldName, String newName) {
@@ -67,6 +103,7 @@ class _HomePageState extends State<HomePage> {
         currentCounter = newName;
       }
     });
+    _saveCounters();
   }
 
   void _showAddCounterDialog() {
@@ -181,6 +218,10 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildBody() {
+    if (_isLoadingCounters) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
