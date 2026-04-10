@@ -234,7 +234,7 @@ class _HomePageState extends State<HomePage> {
         ),
         const SizedBox(height: 20),
         ElevatedButton(
-          onPressed: _resetWattenGame,
+          onPressed: _resetWattenSelectedSide,
           style: ElevatedButton.styleFrom(minimumSize: const Size(120, 80)),
           child: const Text('Reset', style: TextStyle(fontSize: 24)),
         ),
@@ -242,9 +242,14 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void _resetWattenGame() {
+  void _resetWattenSelectedSide() {
+    final currentGame = wattenGames[currentWattenGame]!;
+
     setState(() {
-      wattenGames[currentWattenGame] = const WattenGame(me: 0, you: 0);
+      wattenGames[currentWattenGame] =
+          selectedWattenSide == WattenSide.me
+              ? currentGame.copyWith(me: 0)
+              : currentGame.copyWith(you: 0);
     });
     _saveCounters();
   }
