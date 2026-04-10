@@ -38,6 +38,12 @@ class _HomePageState extends State<HomePage> {
   );
   String currentWattenGame = CounterStorageService.defaultCurrentWattenGame;
   WattenSide selectedWattenSide = WattenSide.me;
+  Map<String, int> mulatschakPlayers = Map<String, int>.from(
+    CounterStorageService.defaultMulatschakPlayers,
+  );
+  String currentMulatschakPlayer =
+      CounterStorageService.defaultCurrentMulatschakPlayer;
+  int mulatschakMultiplier = CounterStorageService.defaultMulatschakMultiplier;
   bool _isLoadingCounters = true;
 
   @override
@@ -58,6 +64,9 @@ class _HomePageState extends State<HomePage> {
       currentCounter = storedData.currentCounter;
       wattenGames = storedData.wattenGames;
       currentWattenGame = storedData.currentWattenGame;
+      mulatschakPlayers = storedData.mulatschakPlayers;
+      currentMulatschakPlayer = storedData.currentMulatschakPlayer;
+      mulatschakMultiplier = storedData.mulatschakMultiplier;
       _isLoadingCounters = false;
     });
   }
@@ -68,6 +77,9 @@ class _HomePageState extends State<HomePage> {
       currentCounter: currentCounter,
       wattenGames: wattenGames,
       currentWattenGame: currentWattenGame,
+      mulatschakPlayers: mulatschakPlayers,
+      currentMulatschakPlayer: currentMulatschakPlayer,
+      mulatschakMultiplier: mulatschakMultiplier,
       appMode: appMode ?? widget.appMode,
     );
   }
@@ -115,12 +127,25 @@ class _HomePageState extends State<HomePage> {
     return gameName.isNotEmpty && !wattenGames.containsKey(gameName);
   }
 
+  bool _isMulatschakPlayerNameValid(String playerName) {
+    return playerName.isNotEmpty && !mulatschakPlayers.containsKey(playerName);
+  }
+
   String? _wattenWinner(WattenGame game) {
     if (game.me > 10 && game.me > game.you) {
       return 'Me';
     }
     if (game.you > 10 && game.you > game.me) {
       return 'You';
+    }
+    return null;
+  }
+
+  String? _mulatschakWinner() {
+    for (final entry in mulatschakPlayers.entries) {
+      if (entry.value == 0) {
+        return entry.key;
+      }
     }
     return null;
   }
@@ -191,6 +216,67 @@ class _HomePageState extends State<HomePage> {
       if (currentWattenGame == gameName) {
         currentWattenGame = wattenGames.keys.first;
       }
+    });
+    _saveCounters();
+  }
+
+  void _selectMulatschakPlayer(String playerName) {
+    setState(() {
+      currentMulatschakPlayer = playerName;
+    });
+    _saveCounters();
+  }
+
+  void _addMulatschakPlayer(String playerName) {
+    setState(() {
+      mulatschakPlayers[playerName] = 21;
+      currentMulatschakPlayer = playerName;
+    });
+    _saveCounters();
+  }
+
+  void _deleteMulatschakPlayer(String playerName) {
+    if (mulatschakPlayers.length <= 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('At least one player must remain.')),
+      );
+      return;
+    }
+
+    setState(() {
+      mulatschakPlayers.remove(playerName);
+      if (currentMulatschakPlayer == playerName) {
+        currentMulatschakPlayer = mulatschakPlayers.keys.first;
+      }
+    });
+    _saveCounters();
+  }
+
+  void _updateMulatschakScore(int baseDelta) {
+    final currentValue = mulatschakPlayers[currentMulatschakPlayer]!;
+    final delta = baseDelta * mulatschakMultiplier;
+    final nextValue = currentValue + delta;
+
+    if (nextValue < 0) {
+      return;
+    }
+
+    setState(() {
+      mulatschakPlayers[currentMulatschakPlayer] = nextValue;
+    });
+    _saveCounters();
+  }
+
+  void _resetMulatschakPlayers() {
+    setState(() {
+      mulatschakPlayers.updateAll((key, value) => 21);
+    });
+    _saveCounters();
+  }
+
+  void _setMulatschakMultiplier(int multiplier) {
+    setState(() {
+      mulatschakMultiplier = multiplier;
     });
     _saveCounters();
   }
@@ -325,6 +411,63 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  void _showAddMulatschakPlayerDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        String newPlayerName = '';
+        final textController = TextEditingController();
+        final focusNode = FocusNode();
+
+        void submit() {
+          final trimmedName = newPlayerName.trim();
+          if (_isMulatschakPlayerNameValid(trimmedName)) {
+            _addMulatschakPlayer(trimmedName);
+            Navigator.of(context).pop();
+          }
+        }
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (focusNode.canRequestFocus) {
+            focusNode.requestFocus();
+          }
+          if (textController.text.isNotEmpty) {
+            textController.selection = TextSelection(
+              baseOffset: 0,
+              extentOffset: textController.text.length,
+            );
+          }
+        });
+
+        return AlertDialog(
+          title: const Text('Add Player'),
+          content: TextField(
+            controller: textController,
+            focusNode: focusNode,
+            autofocus: true,
+            onChanged: (value) {
+              newPlayerName = value;
+            },
+            onSubmitted: (_) => submit(),
+            decoration: const InputDecoration(hintText: 'Player name'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: submit,
+              child: const Text('Add'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _showRenameCounterDialog(String oldName) {
     showDialog(
       context: context,
@@ -415,6 +558,33 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  void _showDeleteMulatschakPlayerDialog(String playerName) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete Player'),
+          content: Text('Do you really want to delete "$playerName"?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                _deleteMulatschakPlayer(playerName);
+                Navigator.of(context).pop();
+              },
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _openDonateUrl() async {
     await UrlLauncherService.openDonateUrl(context);
   }
@@ -436,21 +606,47 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildDrawer() {
     final isWattenMode = widget.appMode == AppMode.watten;
+    final isMulatschakMode = widget.appMode == AppMode.mulatschak;
 
     return CounterDrawer(
-      items: isWattenMode ? wattenGames.keys.toList() : counters.keys.toList(),
-      selectedItem: isWattenMode ? currentWattenGame : currentCounter,
-      addButtonLabel: isWattenMode ? 'Add Game' : 'New Counter',
-      addButtonIcon: isWattenMode ? Icons.sports_score : Icons.add,
-      onAddNewItem: isWattenMode ? _showAddWattenGameDialog : _showAddCounterDialog,
+      items: isWattenMode
+          ? wattenGames.keys.toList()
+          : isMulatschakMode
+          ? mulatschakPlayers.keys.toList()
+          : counters.keys.toList(),
+      selectedItem: isWattenMode
+          ? currentWattenGame
+          : isMulatschakMode
+          ? currentMulatschakPlayer
+          : currentCounter,
+      addButtonLabel: isWattenMode
+          ? 'Add Game'
+          : isMulatschakMode
+          ? 'Add Player'
+          : 'New Counter',
+      addButtonIcon: isWattenMode
+          ? Icons.sports_score
+          : isMulatschakMode
+          ? Icons.person_add_alt_1
+          : Icons.add,
+      closeDrawerOnAdd: !isMulatschakMode,
+      onAddNewItem: isWattenMode
+          ? _showAddWattenGameDialog
+          : isMulatschakMode
+          ? _showAddMulatschakPlayerDialog
+          : _showAddCounterDialog,
       onSelectItem: (item) {
         if (isWattenMode) {
           _selectWattenGame(item);
           return;
         }
+        if (isMulatschakMode) {
+          _selectMulatschakPlayer(item);
+          return;
+        }
         _selectCounter(item);
       },
-      onRenameItem: isWattenMode
+      onRenameItem: isWattenMode || isMulatschakMode
           ? null
           : (counter) {
               _showRenameCounterDialog(counter);
@@ -458,6 +654,10 @@ class _HomePageState extends State<HomePage> {
       onDeleteItem: (item) {
         if (isWattenMode) {
           _showDeleteWattenGameDialog(item);
+          return;
+        }
+        if (isMulatschakMode) {
+          _showDeleteMulatschakPlayerDialog(item);
           return;
         }
         _showDeleteCounterDialog(item);
@@ -644,6 +844,194 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Widget _buildMulatschakPlayerCard(String playerName, int score) {
+    final isSelected = playerName == currentMulatschakPlayer;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          currentMulatschakPlayer = playerName;
+        });
+        _saveCounters();
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        width: 180,
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white.withOpacity(0.18) : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected
+                ? Colors.white.withOpacity(0.45)
+                : Theme.of(context).dividerColor,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              playerName,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              '$score',
+              style: const TextStyle(fontSize: 64, fontWeight: FontWeight.w900),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMulatschakMultiplierSelector() {
+    const baseMultipliers = [1, 2, 4, 8, 16];
+    const extraMultipliers = [32, 64, 128];
+    final dropdownValue = extraMultipliers.contains(mulatschakMultiplier)
+        ? mulatschakMultiplier
+        : extraMultipliers.first;
+
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 10,
+      runSpacing: 10,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        ...baseMultipliers.map((multiplier) {
+          final isSelected = mulatschakMultiplier == multiplier;
+          return ChoiceChip(
+            label: Text('${multiplier}x'),
+            selected: isSelected,
+            onSelected: (_) => _setMulatschakMultiplier(multiplier),
+          );
+        }),
+        DropdownButton<int>(
+          value: dropdownValue,
+          borderRadius: BorderRadius.circular(16),
+          items: extraMultipliers
+              .map(
+                (multiplier) => DropdownMenuItem<int>(
+                  value: multiplier,
+                  child: Text('${multiplier}x'),
+                ),
+              )
+              .toList(),
+          onChanged: (value) {
+            if (value != null) {
+              _setMulatschakMultiplier(value);
+            }
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMulatschakControls() {
+    return Column(
+      children: [
+        const Text(
+          'Multiplier',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 12),
+        _buildMulatschakMultiplierSelector(),
+        const SizedBox(height: 10),
+        Text(
+          'Current factor: ${mulatschakMultiplier}x',
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 20),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ElevatedButton(
+              onPressed: () => _updateMulatschakScore(-1),
+              style: ElevatedButton.styleFrom(minimumSize: const Size(100, 80)),
+              child: const Text('-1', style: TextStyle(fontSize: 24)),
+            ),
+            const SizedBox(width: 20),
+            ElevatedButton(
+              onPressed: () => _updateMulatschakScore(1),
+              style: ElevatedButton.styleFrom(minimumSize: const Size(100, 80)),
+              child: const Text('+1', style: TextStyle(fontSize: 24)),
+            ),
+            const SizedBox(width: 20),
+            ElevatedButton(
+              onPressed: () => _updateMulatschakScore(5),
+              style: ElevatedButton.styleFrom(minimumSize: const Size(120, 80)),
+              child: const Text('+5', style: TextStyle(fontSize: 24)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        ElevatedButton(
+          onPressed: _resetMulatschakPlayers,
+          style: ElevatedButton.styleFrom(minimumSize: const Size(120, 80)),
+          child: const Text('Reset', style: TextStyle(fontSize: 24)),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMulatschakBody() {
+    if (_isLoadingCounters) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    final winner = _mulatschakWinner();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
+      child: Column(
+        children: [
+          if (winner != null)
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(bottom: 20),
+              padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
+              decoration: BoxDecoration(
+                color: Colors.amber.withOpacity(0.18),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: Colors.amber.withOpacity(0.45),
+                  width: 2,
+                ),
+              ),
+              child: Text(
+                '$winner wins',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 12,
+                runSpacing: 12,
+                children: mulatschakPlayers.entries
+                    .map(
+                      (entry) =>
+                          _buildMulatschakPlayerCard(entry.key, entry.value),
+                    )
+                    .toList(),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          _buildMulatschakControls(),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -651,6 +1039,8 @@ class _HomePageState extends State<HomePage> {
       drawer: _buildDrawer(),
       body: widget.appMode == AppMode.watten
           ? _buildWattenBody()
+          : widget.appMode == AppMode.mulatschak
+          ? _buildMulatschakBody()
           : _buildCounterBody(),
     );
   }

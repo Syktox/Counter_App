@@ -7,6 +7,7 @@ class CounterDrawer extends StatelessWidget {
   final String selectedItem;
   final String addButtonLabel;
   final IconData addButtonIcon;
+  final bool closeDrawerOnAdd;
   final VoidCallback onAddNewItem;
   final CounterNameCallback onSelectItem;
   final CounterNameCallback? onRenameItem;
@@ -19,6 +20,7 @@ class CounterDrawer extends StatelessWidget {
     required this.selectedItem,
     required this.addButtonLabel,
     required this.addButtonIcon,
+    this.closeDrawerOnAdd = true,
     required this.onAddNewItem,
     required this.onSelectItem,
     required this.onRenameItem,
@@ -73,7 +75,9 @@ class CounterDrawer extends StatelessWidget {
                   leading: Icon(addButtonIcon),
                   title: Text(addButtonLabel),
                   onTap: () {
-                    Navigator.of(context).pop();
+                    if (closeDrawerOnAdd) {
+                      Navigator.of(context).pop();
+                    }
                     onAddNewItem();
                   },
                 ),

@@ -10,6 +10,9 @@ class CounterStorageData {
   final String currentCounter;
   final Map<String, WattenGame> wattenGames;
   final String currentWattenGame;
+  final Map<String, int> mulatschakPlayers;
+  final String currentMulatschakPlayer;
+  final int mulatschakMultiplier;
   final AppMode appMode;
 
   const CounterStorageData({
@@ -17,6 +20,9 @@ class CounterStorageData {
     required this.currentCounter,
     required this.wattenGames,
     required this.currentWattenGame,
+    required this.mulatschakPlayers,
+    required this.currentMulatschakPlayer,
+    required this.mulatschakMultiplier,
     required this.appMode,
   });
 }
@@ -26,6 +32,9 @@ class CounterStorageService {
   static const String _currentCounterKey = 'current_counter';
   static const String _wattenGamesKey = 'watten_games';
   static const String _currentWattenGameKey = 'current_watten_game';
+  static const String _mulatschakPlayersKey = 'mulatschak_players';
+  static const String _currentMulatschakPlayerKey = 'current_mulatschak_player';
+  static const String _mulatschakMultiplierKey = 'mulatschak_multiplier';
   static const String _appModeKey = 'app_mode';
 
   static const Map<String, int> defaultCounters = {
@@ -40,6 +49,12 @@ class CounterStorageService {
     'Game 3': WattenGame(me: 0, you: 0),
   };
   static const String defaultCurrentWattenGame = 'Game 1';
+  static const Map<String, int> defaultMulatschakPlayers = {
+    'Player 1': 21,
+    'Player 2': 21,
+  };
+  static const String defaultCurrentMulatschakPlayer = 'Player 1';
+  static const int defaultMulatschakMultiplier = 1;
   static const AppMode defaultAppMode = AppMode.counter;
 
   static Future<CounterStorageData> load() async {
@@ -48,10 +63,19 @@ class CounterStorageService {
     final storedCurrentCounter = prefs.getString(_currentCounterKey);
     final wattenGamesJson = prefs.getString(_wattenGamesKey);
     final storedCurrentWattenGame = prefs.getString(_currentWattenGameKey);
+    final mulatschakPlayersJson = prefs.getString(_mulatschakPlayersKey);
+    final storedCurrentMulatschakPlayer = prefs.getString(
+      _currentMulatschakPlayerKey,
+    );
+    final storedMulatschakMultiplier = prefs.getInt(_mulatschakMultiplierKey);
     final storedAppMode = prefs.getString(_appModeKey);
 
     final counters = _decodeCounters(countersJson);
     final wattenGames = _decodeWattenGames(wattenGamesJson);
+    final mulatschakPlayers = _decodeCounters(
+      mulatschakPlayersJson,
+      fallback: defaultMulatschakPlayers,
+    );
     final currentCounter =
         counters.containsKey(storedCurrentCounter)
             ? storedCurrentCounter!
@@ -60,13 +84,24 @@ class CounterStorageService {
         wattenGames.containsKey(storedCurrentWattenGame)
             ? storedCurrentWattenGame!
             : wattenGames.keys.first;
+    final currentMulatschakPlayer =
+        mulatschakPlayers.containsKey(storedCurrentMulatschakPlayer)
+            ? storedCurrentMulatschakPlayer!
+            : mulatschakPlayers.keys.first;
     final appMode = _decodeAppMode(storedAppMode);
+    final mulatschakMultiplier =
+        storedMulatschakMultiplier != null && storedMulatschakMultiplier > 0
+            ? storedMulatschakMultiplier
+            : defaultMulatschakMultiplier;
 
     return CounterStorageData(
       counters: counters,
       currentCounter: currentCounter,
       wattenGames: wattenGames,
       currentWattenGame: currentWattenGame,
+      mulatschakPlayers: mulatschakPlayers,
+      currentMulatschakPlayer: currentMulatschakPlayer,
+      mulatschakMultiplier: mulatschakMultiplier,
       appMode: appMode,
     );
   }
@@ -76,6 +111,9 @@ class CounterStorageService {
     required String currentCounter,
     required Map<String, WattenGame> wattenGames,
     required String currentWattenGame,
+    required Map<String, int> mulatschakPlayers,
+    required String currentMulatschakPlayer,
+    required int mulatschakMultiplier,
     required AppMode appMode,
   }) async {
     final prefs = await SharedPreferences.getInstance();
@@ -88,18 +126,26 @@ class CounterStorageService {
       ),
     );
     await prefs.setString(_currentWattenGameKey, currentWattenGame);
+    await prefs.setString(_mulatschakPlayersKey, jsonEncode(mulatschakPlayers));
+    await prefs.setString(_currentMulatschakPlayerKey, currentMulatschakPlayer);
+    await prefs.setInt(_mulatschakMultiplierKey, mulatschakMultiplier);
     await prefs.setString(_appModeKey, appMode.name);
   }
 
-  static Map<String, int> _decodeCounters(String? countersJson) {
+  static Map<String, int> _decodeCounters(
+    String? countersJson, {
+    Map<String, int>? fallback,
+  }) {
+    final fallbackCounters = fallback ?? defaultCounters;
+
     if (countersJson == null || countersJson.isEmpty) {
-      return Map<String, int>.from(defaultCounters);
+      return Map<String, int>.from(fallbackCounters);
     }
 
     try {
       final decoded = jsonDecode(countersJson);
       if (decoded is! Map<String, dynamic>) {
-        return Map<String, int>.from(defaultCounters);
+        return Map<String, int>.from(fallbackCounters);
       }
 
       final counters = decoded.map(
@@ -107,12 +153,12 @@ class CounterStorageService {
       );
 
       if (counters.isEmpty) {
-        return Map<String, int>.from(defaultCounters);
+        return Map<String, int>.from(fallbackCounters);
       }
 
       return counters;
     } catch (_) {
-      return Map<String, int>.from(defaultCounters);
+      return Map<String, int>.from(fallbackCounters);
     }
   }
 
