@@ -213,14 +213,38 @@ class _HomePageState extends State<HomePage> {
     _saveCounters();
   }
 
-  void _resetWattenSelectedSide() {
-    final currentGame = wattenGames[currentWattenGame]!;
+  Widget _buildWattenControls() {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ElevatedButton(
+              onPressed: () => _updateWattenScore(2),
+              style: ElevatedButton.styleFrom(minimumSize: const Size(100, 80)),
+              child: const Text('+2', style: TextStyle(fontSize: 28)),
+            ),
+            const SizedBox(width: 20),
+            ElevatedButton(
+              onPressed: () => _updateWattenScore(3),
+              style: ElevatedButton.styleFrom(minimumSize: const Size(100, 80)),
+              child: const Text('+3', style: TextStyle(fontSize: 28)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        ElevatedButton(
+          onPressed: _resetWattenGame,
+          style: ElevatedButton.styleFrom(minimumSize: const Size(120, 80)),
+          child: const Text('Reset', style: TextStyle(fontSize: 24)),
+        ),
+      ],
+    );
+  }
 
+  void _resetWattenGame() {
     setState(() {
-      wattenGames[currentWattenGame] =
-          selectedWattenSide == WattenSide.me
-              ? currentGame.copyWith(me: 0)
-              : currentGame.copyWith(you: 0);
+      wattenGames[currentWattenGame] = const WattenGame(me: 0, you: 0);
     });
     _saveCounters();
   }
@@ -552,18 +576,21 @@ class _HomePageState extends State<HomePage> {
           if (winner != null)
             Container(
               width: double.infinity,
-              margin: const EdgeInsets.only(bottom: 16),
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+              margin: const EdgeInsets.only(bottom: 20),
+              padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
               decoration: BoxDecoration(
                 color: Colors.amber.withOpacity(0.18),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.amber.withOpacity(0.45)),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: Colors.amber.withOpacity(0.45),
+                  width: 2,
+                ),
               ),
               child: Text(
                 '$winner wins',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontSize: 20,
+                  fontSize: 28,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -596,11 +623,7 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           const SizedBox(height: 24),
-          CounterControls(
-            onIncrement: () => _updateWattenScore(1),
-            onDecrement: () => _updateWattenScore(-1),
-            onReset: _resetWattenSelectedSide,
-          ),
+          _buildWattenControls(),
           const SizedBox(height: 24),
         ],
       ),
