@@ -2,19 +2,31 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/app_mode.dart';
+import '../models/watten_game.dart';
+
 class CounterStorageData {
   final Map<String, int> counters;
   final String currentCounter;
+  final Map<String, WattenGame> wattenGames;
+  final String currentWattenGame;
+  final AppMode appMode;
 
   const CounterStorageData({
     required this.counters,
     required this.currentCounter,
+    required this.wattenGames,
+    required this.currentWattenGame,
+    required this.appMode,
   });
 }
 
 class CounterStorageService {
   static const String _countersKey = 'counters';
   static const String _currentCounterKey = 'current_counter';
+  static const String _wattenGamesKey = 'watten_games';
+  static const String _currentWattenGameKey = 'current_watten_game';
+  static const String _appModeKey = 'app_mode';
 
   static const Map<String, int> defaultCounters = {
     'Workout streak': 0,
@@ -22,31 +34,61 @@ class CounterStorageService {
     'Days till my next holidays': 100,
   };
   static const String defaultCurrentCounter = 'Workout streak';
+  static const Map<String, WattenGame> defaultWattenGames = {
+    'Game 1': WattenGame(me: 0, you: 0),
+    'Game 2': WattenGame(me: 0, you: 0),
+    'Game 3': WattenGame(me: 0, you: 0),
+  };
+  static const String defaultCurrentWattenGame = 'Game 1';
+  static const AppMode defaultAppMode = AppMode.counter;
 
   static Future<CounterStorageData> load() async {
     final prefs = await SharedPreferences.getInstance();
     final countersJson = prefs.getString(_countersKey);
     final storedCurrentCounter = prefs.getString(_currentCounterKey);
+    final wattenGamesJson = prefs.getString(_wattenGamesKey);
+    final storedCurrentWattenGame = prefs.getString(_currentWattenGameKey);
+    final storedAppMode = prefs.getString(_appModeKey);
 
     final counters = _decodeCounters(countersJson);
+    final wattenGames = _decodeWattenGames(wattenGamesJson);
     final currentCounter =
         counters.containsKey(storedCurrentCounter)
             ? storedCurrentCounter!
             : counters.keys.first;
+    final currentWattenGame =
+        wattenGames.containsKey(storedCurrentWattenGame)
+            ? storedCurrentWattenGame!
+            : wattenGames.keys.first;
+    final appMode = _decodeAppMode(storedAppMode);
 
     return CounterStorageData(
       counters: counters,
       currentCounter: currentCounter,
+      wattenGames: wattenGames,
+      currentWattenGame: currentWattenGame,
+      appMode: appMode,
     );
   }
 
   static Future<void> save({
     required Map<String, int> counters,
     required String currentCounter,
+    required Map<String, WattenGame> wattenGames,
+    required String currentWattenGame,
+    required AppMode appMode,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_countersKey, jsonEncode(counters));
     await prefs.setString(_currentCounterKey, currentCounter);
+    await prefs.setString(
+      _wattenGamesKey,
+      jsonEncode(
+        wattenGames.map((key, value) => MapEntry(key, value.toJson())),
+      ),
+    );
+    await prefs.setString(_currentWattenGameKey, currentWattenGame);
+    await prefs.setString(_appModeKey, appMode.name);
   }
 
   static Map<String, int> _decodeCounters(String? countersJson) {
@@ -72,5 +114,47 @@ class CounterStorageService {
     } catch (_) {
       return Map<String, int>.from(defaultCounters);
     }
+  }
+
+  static Map<String, WattenGame> _decodeWattenGames(String? wattenGamesJson) {
+    if (wattenGamesJson == null || wattenGamesJson.isEmpty) {
+      return Map<String, WattenGame>.from(defaultWattenGames);
+    }
+
+    try {
+      final decoded = jsonDecode(wattenGamesJson);
+      if (decoded is! Map<String, dynamic>) {
+        return Map<String, WattenGame>.from(defaultWattenGames);
+      }
+
+      final games = decoded.map((key, value) {
+        if (value is! Map<String, dynamic>) {
+          return MapEntry(_normalizeWattenGameName(key), const WattenGame(me: 0, you: 0));
+        }
+        return MapEntry(_normalizeWattenGameName(key), WattenGame.fromJson(value));
+      });
+
+      if (games.isEmpty) {
+        return Map<String, WattenGame>.from(defaultWattenGames);
+      }
+
+      return games;
+    } catch (_) {
+      return Map<String, WattenGame>.from(defaultWattenGames);
+    }
+  }
+
+  static AppMode _decodeAppMode(String? storedAppMode) {
+    return AppMode.values.firstWhere(
+      (mode) => mode.name == storedAppMode,
+      orElse: () => defaultAppMode,
+    );
+  }
+
+  static String _normalizeWattenGameName(String name) {
+    if (name == 'Spiel 1') {
+      return 'Game 1';
+    }
+    return name;
   }
 }

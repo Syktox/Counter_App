@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'models/app_mode.dart';
 import 'screens/home_page.dart';
 
 void main() {
@@ -14,10 +15,17 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   ThemeMode _themeMode = ThemeMode.system;
+  AppMode _appMode = AppMode.counter;
 
   void _updateThemeMode(ThemeMode mode) {
     setState(() {
       _themeMode = mode;
+    });
+  }
+
+  void _updateAppMode(AppMode mode) {
+    setState(() {
+      _appMode = mode;
     });
   }
 
@@ -40,6 +48,8 @@ class _MyAppState extends State<MyApp> {
       home: HomePage(
         themeMode: _themeMode,
         onThemeModeChanged: _updateThemeMode,
+        appMode: _appMode,
+        onAppModeChanged: _updateAppMode,
       ),
     );
   }

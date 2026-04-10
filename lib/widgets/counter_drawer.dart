@@ -3,43 +3,56 @@ import 'package:flutter/material.dart';
 typedef CounterNameCallback = void Function(String counterName);
 
 class CounterDrawer extends StatelessWidget {
-  final Map<String, int> counters;
-  final VoidCallback onAddNewCounter;
-  final CounterNameCallback onSelectCounter;
-  final CounterNameCallback onRenameCounter;
-  final CounterNameCallback onDeleteCounter;
+  final List<String> items;
+  final String selectedItem;
+  final String addButtonLabel;
+  final IconData addButtonIcon;
+  final VoidCallback onAddNewItem;
+  final CounterNameCallback onSelectItem;
+  final CounterNameCallback? onRenameItem;
+  final CounterNameCallback onDeleteItem;
   final VoidCallback onOpenSettings;
 
   const CounterDrawer({
     super.key,
-    required this.counters,
-    required this.onAddNewCounter,
-    required this.onSelectCounter,
-    required this.onRenameCounter,
-    required this.onDeleteCounter,
+    required this.items,
+    required this.selectedItem,
+    required this.addButtonLabel,
+    required this.addButtonIcon,
+    required this.onAddNewItem,
+    required this.onSelectItem,
+    required this.onRenameItem,
+    required this.onDeleteItem,
     required this.onOpenSettings,
   });
 
   Widget _buildCounterTile(BuildContext context, String counter) {
+    final isSelected = counter == selectedItem;
+
     return ListTile(
+      selected: isSelected,
+      selectedTileColor: Theme.of(
+        context,
+      ).colorScheme.primary.withValues(alpha: 0.08),
       title: Text(counter),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: () => onRenameCounter(counter),
-            tooltip: 'Rename counter',
-          ),
+          if (onRenameItem != null)
+            IconButton(
+              icon: const Icon(Icons.edit),
+              onPressed: () => onRenameItem!(counter),
+              tooltip: 'Rename item',
+            ),
           IconButton(
             icon: const Icon(Icons.delete_outline),
-            onPressed: () => onDeleteCounter(counter),
-            tooltip: 'Delete counter',
+            onPressed: () => onDeleteItem(counter),
+            tooltip: 'Delete item',
           ),
         ],
       ),
       onTap: () {
-        onSelectCounter(counter);
+        onSelectItem(counter);
         Navigator.of(context).pop();
       },
     );
@@ -47,9 +60,7 @@ class CounterDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final counterTiles = counters.keys.map(
-      (counter) => _buildCounterTile(context, counter),
-    );
+    final counterTiles = items.map((counter) => _buildCounterTile(context, counter));
 
     return Drawer(
       child: Column(
@@ -59,11 +70,11 @@ class CounterDrawer extends StatelessWidget {
               children: [
                 ...counterTiles,
                 ListTile(
-                  leading: const Icon(Icons.add),
-                  title: const Text('New Counter'),
+                  leading: Icon(addButtonIcon),
+                  title: Text(addButtonLabel),
                   onTap: () {
                     Navigator.of(context).pop();
-                    onAddNewCounter();
+                    onAddNewItem();
                   },
                 ),
               ],
