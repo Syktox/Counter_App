@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../models/app_mode.dart';
 import '../models/watten_game.dart';
 import '../services/counter_storage_service.dart';
@@ -522,13 +523,21 @@ class _HomePageState extends State<HomePage> {
     required bool isSelected,
     required VoidCallback onTap,
   }) {
+    final isDesktopCard =
+        !kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.windows ||
+            defaultTargetPlatform == TargetPlatform.macOS);
+
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
           margin: const EdgeInsets.symmetric(horizontal: 6),
-          constraints: const BoxConstraints(minHeight: 220, maxHeight: 260),
+          constraints: BoxConstraints(
+            minHeight: isDesktopCard ? 260 : 220,
+            maxHeight: isDesktopCard ? 300 : 260,
+          ),
           padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
           decoration: BoxDecoration(
             color: isSelected ? Colors.white.withOpacity(0.18) : Colors.transparent,
