@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 typedef CounterNameCallback = void Function(String counterName);
+typedef ReorderItemsCallback = void Function(int oldIndex, int newIndex);
 
 class CounterDrawer extends StatelessWidget {
   final List<String> items;
@@ -8,10 +9,12 @@ class CounterDrawer extends StatelessWidget {
   final String addButtonLabel;
   final IconData addButtonIcon;
   final bool closeDrawerOnAdd;
+  final bool enableReorder;
   final VoidCallback onAddNewItem;
   final CounterNameCallback onSelectItem;
   final CounterNameCallback? onRenameItem;
   final CounterNameCallback onDeleteItem;
+  final ReorderItemsCallback? onReorderItems;
   final VoidCallback onOpenSettings;
 
   const CounterDrawer({
@@ -21,67 +24,92 @@ class CounterDrawer extends StatelessWidget {
     required this.addButtonLabel,
     required this.addButtonIcon,
     this.closeDrawerOnAdd = true,
+    this.enableReorder = false,
     required this.onAddNewItem,
     required this.onSelectItem,
     required this.onRenameItem,
     required this.onDeleteItem,
+    this.onReorderItems,
     required this.onOpenSettings,
   });
 
-  Widget _buildCounterTile(BuildContext context, String counter) {
+  Widget _buildCounterTile(BuildContext context, String counter, int index) {
     final isSelected = counter == selectedItem;
 
-    return ListTile(
-      selected: isSelected,
-      selectedTileColor: Theme.of(
-        context,
-      ).colorScheme.primary.withValues(alpha: 0.08),
-      title: Text(counter),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (onRenameItem != null)
+    return Container(
+      key: ValueKey(counter),
+      child: ListTile(
+        selected: isSelected,
+        selectedTileColor: Theme.of(
+          context,
+        ).colorScheme.primary.withValues(alpha: 0.08),
+        title: Text(counter),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (onRenameItem != null)
+              IconButton(
+                icon: const Icon(Icons.edit),
+                onPressed: () => onRenameItem!(counter),
+                tooltip: 'Rename item',
+              ),
             IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: () => onRenameItem!(counter),
-              tooltip: 'Rename item',
+              icon: const Icon(Icons.delete_outline),
+              onPressed: () => onDeleteItem(counter),
+              tooltip: 'Delete item',
             ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline),
-            onPressed: () => onDeleteItem(counter),
-            tooltip: 'Delete item',
-          ),
-        ],
+            if (enableReorder)
+              ReorderableDragStartListener(
+                index: index,
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8),
+                  child: Icon(Icons.drag_handle),
+                ),
+              ),
+          ],
+        ),
+        onTap: () {
+          onSelectItem(counter);
+          Navigator.of(context).pop();
+        },
       ),
-      onTap: () {
-        onSelectItem(counter);
-        Navigator.of(context).pop();
-      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final counterTiles = items.map((counter) => _buildCounterTile(context, counter));
-
     return Drawer(
       child: Column(
         children: [
           Expanded(
-            child: ListView(
-              children: [
-                ...counterTiles,
-                ListTile(
-                  leading: Icon(addButtonIcon),
-                  title: Text(addButtonLabel),
-                  onTap: () {
-                    if (closeDrawerOnAdd) {
-                      Navigator.of(context).pop();
-                    }
-                    onAddNewItem();
-                  },
-                ),
-              ],
+            child: ReorderableListView.builder(
+              buildDefaultDragHandles: false,
+              itemCount: items.length + 1,
+              onReorder: (oldIndex, newIndex) {
+                if (oldIndex == items.length || newIndex > items.length) {
+                  return;
+                }
+                if (enableReorder && onReorderItems != null) {
+                  onReorderItems!(oldIndex, newIndex);
+                }
+              },
+              itemBuilder: (context, index) {
+                if (index == items.length) {
+                  return ListTile(
+                    key: const ValueKey('add-item-tile'),
+                    leading: Icon(addButtonIcon),
+                    title: Text(addButtonLabel),
+                    onTap: () {
+                      if (closeDrawerOnAdd) {
+                        Navigator.of(context).pop();
+                      }
+                      onAddNewItem();
+                    },
+                  );
+                }
+
+                return _buildCounterTile(context, items[index], index);
+              },
             ),
           ),
           const Divider(),

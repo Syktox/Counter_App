@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'dart:collection';
 import '../models/app_mode.dart';
 import '../models/watten_game.dart';
 import '../services/counter_storage_service.dart';
@@ -190,6 +191,44 @@ class _HomePageState extends State<HomePage> {
   void _selectWattenGame(String gameName) {
     setState(() {
       currentWattenGame = gameName;
+    });
+    _saveCounters();
+  }
+
+  void _renameMulatschakPlayer(String oldName, String newName) {
+    setState(() {
+      final value = mulatschakPlayers[oldName]!;
+      mulatschakPlayers.remove(oldName);
+      mulatschakPlayers[newName] = value;
+      if (currentMulatschakPlayer == oldName) {
+        currentMulatschakPlayer = newName;
+      }
+    });
+    _saveCounters();
+  }
+
+  void _reorderCounters(int oldIndex, int newIndex) {
+    setState(() {
+      final entries = counters.entries.toList();
+      if (newIndex > oldIndex) {
+        newIndex -= 1;
+      }
+      final movedEntry = entries.removeAt(oldIndex);
+      entries.insert(newIndex, movedEntry);
+      counters = LinkedHashMap<String, int>.fromEntries(entries);
+    });
+    _saveCounters();
+  }
+
+  void _reorderMulatschakPlayers(int oldIndex, int newIndex) {
+    setState(() {
+      final entries = mulatschakPlayers.entries.toList();
+      if (newIndex > oldIndex) {
+        newIndex -= 1;
+      }
+      final movedEntry = entries.removeAt(oldIndex);
+      entries.insert(newIndex, movedEntry);
+      mulatschakPlayers = LinkedHashMap<String, int>.fromEntries(entries);
     });
     _saveCounters();
   }
@@ -469,18 +508,77 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _showRenameCounterDialog(String oldName) {
+    _showRenameItemDialog(
+      title: 'Rename Counter',
+      initialValue: oldName,
+      hintText: 'New counter name',
+      isValidName: (newName) => newName == oldName || _isCounterNameValid(newName),
+      onRename: (newName) {
+        if (newName != oldName) {
+          _renameCounter(oldName, newName);
+        }
+      },
+    );
+  }
+
+  void _showRenameMulatschakPlayerDialog(String oldName) {
+    _showRenameItemDialog(
+      title: 'Rename Player',
+      initialValue: oldName,
+      hintText: 'New player name',
+      isValidName: (newName) =>
+          newName == oldName || _isMulatschakPlayerNameValid(newName),
+      onRename: (newName) {
+        if (newName != oldName) {
+          _renameMulatschakPlayer(oldName, newName);
+        }
+      },
+    );
+  }
+
+  void _showRenameItemDialog({
+    required String title,
+    required String initialValue,
+    required String hintText,
+    required bool Function(String newName) isValidName,
+    required ValueChanged<String> onRename,
+  }) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        String newCounterName = oldName;
+        String newItemName = initialValue;
+        final controller = TextEditingController(text: initialValue);
+        final focusNode = FocusNode();
+
+        void submit() {
+          final trimmedName = newItemName.trim();
+          if (trimmedName.isNotEmpty && isValidName(trimmedName)) {
+            onRename(trimmedName);
+            Navigator.of(context).pop();
+          }
+        }
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (focusNode.canRequestFocus) {
+            focusNode.requestFocus();
+          }
+          controller.selection = TextSelection(
+            baseOffset: 0,
+            extentOffset: controller.text.length,
+          );
+        });
+
         return AlertDialog(
-          title: const Text('Rename Counter'),
+          title: Text(title),
           content: TextField(
-            controller: TextEditingController(text: oldName),
+            controller: controller,
+            focusNode: focusNode,
+            autofocus: true,
             onChanged: (value) {
-              newCounterName = value;
+              newItemName = value;
             },
-            decoration: const InputDecoration(hintText: 'New counter name'),
+            onSubmitted: (_) => submit(),
+            decoration: InputDecoration(hintText: hintText),
           ),
           actions: [
             TextButton(
@@ -490,12 +588,7 @@ class _HomePageState extends State<HomePage> {
               child: const Text('Cancel'),
             ),
             TextButton(
-              onPressed: () {
-                if (_isCounterNameValid(newCounterName)) {
-                  _renameCounter(oldName, newCounterName);
-                }
-                Navigator.of(context).pop();
-              },
+              onPressed: submit,
               child: const Text('Rename'),
             ),
           ],
@@ -630,6 +723,7 @@ class _HomePageState extends State<HomePage> {
           ? Icons.person_add_alt_1
           : Icons.add,
       closeDrawerOnAdd: !isMulatschakMode,
+      enableReorder: !isWattenMode,
       onAddNewItem: isWattenMode
           ? _showAddWattenGameDialog
           : isMulatschakMode
@@ -646,8 +740,12 @@ class _HomePageState extends State<HomePage> {
         }
         _selectCounter(item);
       },
-      onRenameItem: isWattenMode || isMulatschakMode
+      onRenameItem: isWattenMode
           ? null
+          : isMulatschakMode
+          ? (player) {
+              _showRenameMulatschakPlayerDialog(player);
+            }
           : (counter) {
               _showRenameCounterDialog(counter);
             },
@@ -662,6 +760,11 @@ class _HomePageState extends State<HomePage> {
         }
         _showDeleteCounterDialog(item);
       },
+      onReorderItems: isWattenMode
+          ? null
+          : isMulatschakMode
+          ? _reorderMulatschakPlayers
+          : _reorderCounters,
       onOpenSettings: () {
         Navigator.of(context).push(
           MaterialPageRoute(
