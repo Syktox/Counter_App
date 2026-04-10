@@ -79,52 +79,56 @@ class CounterDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Drawer(
-      child: Column(
-        children: [
-          Expanded(
-            child: ReorderableListView.builder(
-              buildDefaultDragHandles: false,
-              itemCount: items.length + 1,
-              onReorder: (oldIndex, newIndex) {
-                if (oldIndex == items.length || newIndex > items.length) {
-                  return;
-                }
-                if (enableReorder && onReorderItems != null) {
-                  onReorderItems!(oldIndex, newIndex);
-                }
-              },
-              itemBuilder: (context, index) {
-                if (index == items.length) {
-                  return ListTile(
-                    key: const ValueKey('add-item-tile'),
-                    leading: Icon(addButtonIcon),
-                    title: Text(addButtonLabel),
-                    onTap: () {
-                      if (closeDrawerOnAdd) {
-                        Navigator.of(context).pop();
-                      }
-                      onAddNewItem();
-                    },
-                  );
-                }
+      child: SafeArea(
+        top: true,
+        bottom: false,
+        child: Column(
+          children: [
+            Expanded(
+              child: ReorderableListView.builder(
+                buildDefaultDragHandles: false,
+                itemCount: items.length + 1,
+                onReorder: (oldIndex, newIndex) {
+                  if (oldIndex == items.length || newIndex > items.length) {
+                    return;
+                  }
+                  if (enableReorder && onReorderItems != null) {
+                    onReorderItems!(oldIndex, newIndex);
+                  }
+                },
+                itemBuilder: (context, index) {
+                  if (index == items.length) {
+                    return ListTile(
+                      key: const ValueKey('add-item-tile'),
+                      leading: Icon(addButtonIcon),
+                      title: Text(addButtonLabel),
+                      onTap: () {
+                        if (closeDrawerOnAdd) {
+                          Navigator.of(context).pop();
+                        }
+                        onAddNewItem();
+                      },
+                    );
+                  }
 
-                return _buildCounterTile(context, items[index], index);
-              },
+                  return _buildCounterTile(context, items[index], index);
+                },
+              ),
             ),
-          ),
-          const Divider(),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: ListTile(
-              leading: const Icon(Icons.settings),
-              title: const Text('Settings'),
-              onTap: () {
-                Navigator.of(context).pop();
-                onOpenSettings();
-              },
+            const Divider(),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: ListTile(
+                leading: const Icon(Icons.settings),
+                title: const Text('Settings'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  onOpenSettings();
+                },
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

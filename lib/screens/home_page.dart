@@ -684,6 +684,11 @@ class _HomePageState extends State<HomePage> {
 
   AppBar _buildAppBar() {
     return AppBar(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      shadowColor: Colors.transparent,
+      surfaceTintColor: Colors.transparent,
       actions: [
         Padding(
           padding: const EdgeInsets.only(right: 8),
@@ -718,7 +723,7 @@ class _HomePageState extends State<HomePage> {
           ? 'Add Player'
           : 'New Counter',
       addButtonIcon: isWattenMode
-          ? Icons.sports_score
+          ? Icons.add
           : isMulatschakMode
           ? Icons.person_add_alt_1
           : Icons.add,
@@ -1137,9 +1142,16 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobileDrawerGesture =
+        !kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.android ||
+            defaultTargetPlatform == TargetPlatform.iOS);
+
     return Scaffold(
       appBar: _buildAppBar(),
       drawer: _buildDrawer(),
+      drawerEdgeDragWidth: isMobileDrawerGesture ? screenWidth * 0.5 : null,
       body: widget.appMode == AppMode.watten
           ? _buildWattenBody()
           : widget.appMode == AppMode.mulatschak

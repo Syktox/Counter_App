@@ -22,7 +22,7 @@ class SettingsPage extends StatelessWidget {
       body: ListView(
         children: [
           const ListTile(
-            title: Text('Modi'),
+            title: Text('Modus'),
           ),
           RadioListTile<AppMode>(
             title: const Text('Counter'),
