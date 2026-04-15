@@ -13,6 +13,9 @@ class CounterStorageData {
   final Map<String, int> mulatschakPlayers;
   final String currentMulatschakPlayer;
   final int mulatschakMultiplier;
+  final bool muleqackEnabled;
+  final int muleqackTriggerPoints;
+  final int muleqackResetPoints;
   final AppMode appMode;
 
   const CounterStorageData({
@@ -23,6 +26,9 @@ class CounterStorageData {
     required this.mulatschakPlayers,
     required this.currentMulatschakPlayer,
     required this.mulatschakMultiplier,
+    required this.muleqackEnabled,
+    required this.muleqackTriggerPoints,
+    required this.muleqackResetPoints,
     required this.appMode,
   });
 }
@@ -35,6 +41,9 @@ class CounterStorageService {
   static const String _mulatschakPlayersKey = 'mulatschak_players';
   static const String _currentMulatschakPlayerKey = 'current_mulatschak_player';
   static const String _mulatschakMultiplierKey = 'mulatschak_multiplier';
+  static const String _muleqackEnabledKey = 'muleqack_enabled';
+  static const String _muleqackTriggerPointsKey = 'muleqack_trigger_points';
+  static const String _muleqackResetPointsKey = 'muleqack_reset_points';
   static const String _appModeKey = 'app_mode';
 
   static const Map<String, int> defaultCounters = {
@@ -55,6 +64,9 @@ class CounterStorageService {
   };
   static const String defaultCurrentMulatschakPlayer = 'Player 1';
   static const int defaultMulatschakMultiplier = 1;
+  static const bool defaultMuleqackEnabled = false;
+  static const int defaultMuleqackTriggerPoints = 100;
+  static const int defaultMuleqackResetPoints = 50;
   static const AppMode defaultAppMode = AppMode.counter;
 
   static Future<CounterStorageData> load() async {
@@ -68,6 +80,9 @@ class CounterStorageService {
       _currentMulatschakPlayerKey,
     );
     final storedMulatschakMultiplier = prefs.getInt(_mulatschakMultiplierKey);
+    final storedMuleqackEnabled = prefs.getBool(_muleqackEnabledKey);
+    final storedMuleqackTriggerPoints = prefs.getInt(_muleqackTriggerPointsKey);
+    final storedMuleqackResetPoints = prefs.getInt(_muleqackResetPointsKey);
     final storedAppMode = prefs.getString(_appModeKey);
 
     final counters = _decodeCounters(countersJson);
@@ -93,6 +108,15 @@ class CounterStorageService {
         storedMulatschakMultiplier != null && storedMulatschakMultiplier > 0
             ? storedMulatschakMultiplier
             : defaultMulatschakMultiplier;
+    final muleqackEnabled = storedMuleqackEnabled ?? defaultMuleqackEnabled;
+    final muleqackTriggerPoints =
+        storedMuleqackTriggerPoints != null && storedMuleqackTriggerPoints > 0
+            ? storedMuleqackTriggerPoints
+            : defaultMuleqackTriggerPoints;
+    final muleqackResetPoints =
+        storedMuleqackResetPoints != null && storedMuleqackResetPoints >= 0
+            ? storedMuleqackResetPoints
+            : defaultMuleqackResetPoints;
 
     return CounterStorageData(
       counters: counters,
@@ -102,6 +126,9 @@ class CounterStorageService {
       mulatschakPlayers: mulatschakPlayers,
       currentMulatschakPlayer: currentMulatschakPlayer,
       mulatschakMultiplier: mulatschakMultiplier,
+      muleqackEnabled: muleqackEnabled,
+      muleqackTriggerPoints: muleqackTriggerPoints,
+      muleqackResetPoints: muleqackResetPoints,
       appMode: appMode,
     );
   }
@@ -114,6 +141,9 @@ class CounterStorageService {
     required Map<String, int> mulatschakPlayers,
     required String currentMulatschakPlayer,
     required int mulatschakMultiplier,
+    required bool muleqackEnabled,
+    required int muleqackTriggerPoints,
+    required int muleqackResetPoints,
     required AppMode appMode,
   }) async {
     final prefs = await SharedPreferences.getInstance();
@@ -129,6 +159,9 @@ class CounterStorageService {
     await prefs.setString(_mulatschakPlayersKey, jsonEncode(mulatschakPlayers));
     await prefs.setString(_currentMulatschakPlayerKey, currentMulatschakPlayer);
     await prefs.setInt(_mulatschakMultiplierKey, mulatschakMultiplier);
+    await prefs.setBool(_muleqackEnabledKey, muleqackEnabled);
+    await prefs.setInt(_muleqackTriggerPointsKey, muleqackTriggerPoints);
+    await prefs.setInt(_muleqackResetPointsKey, muleqackResetPoints);
     await prefs.setString(_appModeKey, appMode.name);
   }
 

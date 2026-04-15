@@ -11,6 +11,36 @@ import 'settings_page.dart';
 
 enum WattenSide { me, you }
 
+class _HomePageSnapshot {
+  final Map<String, int> counters;
+  final String currentCounter;
+  final Map<String, WattenGame> wattenGames;
+  final String currentWattenGame;
+  final WattenSide selectedWattenSide;
+  final Map<String, int> mulatschakPlayers;
+  final String currentMulatschakPlayer;
+  final int mulatschakMultiplier;
+  final bool muleqackEnabled;
+  final int muleqackTriggerPoints;
+  final int muleqackResetPoints;
+  final AppMode appMode;
+
+  const _HomePageSnapshot({
+    required this.counters,
+    required this.currentCounter,
+    required this.wattenGames,
+    required this.currentWattenGame,
+    required this.selectedWattenSide,
+    required this.mulatschakPlayers,
+    required this.currentMulatschakPlayer,
+    required this.mulatschakMultiplier,
+    required this.muleqackEnabled,
+    required this.muleqackTriggerPoints,
+    required this.muleqackResetPoints,
+    required this.appMode,
+  });
+}
+
 class HomePage extends StatefulWidget {
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeModeChanged;
@@ -45,6 +75,10 @@ class _HomePageState extends State<HomePage> {
   String currentMulatschakPlayer =
       CounterStorageService.defaultCurrentMulatschakPlayer;
   int mulatschakMultiplier = CounterStorageService.defaultMulatschakMultiplier;
+  bool muleqackEnabled = CounterStorageService.defaultMuleqackEnabled;
+  int muleqackTriggerPoints = CounterStorageService.defaultMuleqackTriggerPoints;
+  int muleqackResetPoints = CounterStorageService.defaultMuleqackResetPoints;
+  final List<_HomePageSnapshot> _undoStack = [];
   bool _isLoadingCounters = true;
 
   @override
@@ -68,6 +102,9 @@ class _HomePageState extends State<HomePage> {
       mulatschakPlayers = storedData.mulatschakPlayers;
       currentMulatschakPlayer = storedData.currentMulatschakPlayer;
       mulatschakMultiplier = storedData.mulatschakMultiplier;
+      muleqackEnabled = storedData.muleqackEnabled;
+      muleqackTriggerPoints = storedData.muleqackTriggerPoints;
+      muleqackResetPoints = storedData.muleqackResetPoints;
       _isLoadingCounters = false;
     });
   }
@@ -81,16 +118,71 @@ class _HomePageState extends State<HomePage> {
       mulatschakPlayers: mulatschakPlayers,
       currentMulatschakPlayer: currentMulatschakPlayer,
       mulatschakMultiplier: mulatschakMultiplier,
+      muleqackEnabled: muleqackEnabled,
+      muleqackTriggerPoints: muleqackTriggerPoints,
+      muleqackResetPoints: muleqackResetPoints,
       appMode: appMode ?? widget.appMode,
     );
   }
 
+  _HomePageSnapshot _createSnapshot({AppMode? appMode}) {
+    return _HomePageSnapshot(
+      counters: LinkedHashMap<String, int>.from(counters),
+      currentCounter: currentCounter,
+      wattenGames: LinkedHashMap<String, WattenGame>.from(wattenGames),
+      currentWattenGame: currentWattenGame,
+      selectedWattenSide: selectedWattenSide,
+      mulatschakPlayers: LinkedHashMap<String, int>.from(mulatschakPlayers),
+      currentMulatschakPlayer: currentMulatschakPlayer,
+      mulatschakMultiplier: mulatschakMultiplier,
+      muleqackEnabled: muleqackEnabled,
+      muleqackTriggerPoints: muleqackTriggerPoints,
+      muleqackResetPoints: muleqackResetPoints,
+      appMode: appMode ?? widget.appMode,
+    );
+  }
+
+  void _pushUndoSnapshot({AppMode? appMode}) {
+    _undoStack.add(_createSnapshot(appMode: appMode));
+  }
+
+  void _undoLastAction() {
+    if (_undoStack.isEmpty) {
+      return;
+    }
+
+    final snapshot = _undoStack.removeLast();
+    widget.onAppModeChanged(snapshot.appMode);
+    setState(() {
+      counters = LinkedHashMap<String, int>.from(snapshot.counters);
+      currentCounter = snapshot.currentCounter;
+      wattenGames = LinkedHashMap<String, WattenGame>.from(snapshot.wattenGames);
+      currentWattenGame = snapshot.currentWattenGame;
+      selectedWattenSide = snapshot.selectedWattenSide;
+      mulatschakPlayers = LinkedHashMap<String, int>.from(
+        snapshot.mulatschakPlayers,
+      );
+      currentMulatschakPlayer = snapshot.currentMulatschakPlayer;
+      mulatschakMultiplier = snapshot.mulatschakMultiplier;
+      muleqackEnabled = snapshot.muleqackEnabled;
+      muleqackTriggerPoints = snapshot.muleqackTriggerPoints;
+      muleqackResetPoints = snapshot.muleqackResetPoints;
+    });
+    _saveCounters(appMode: snapshot.appMode);
+  }
+
   void _handleAppModeChanged(AppMode mode) {
+    if (mode == widget.appMode) {
+      return;
+    }
+
+    _pushUndoSnapshot();
     widget.onAppModeChanged(mode);
     _saveCounters(appMode: mode);
   }
 
   void _increment() {
+    _pushUndoSnapshot();
     setState(() {
       counters[currentCounter] = counters[currentCounter]! + 1;
     });
@@ -98,15 +190,23 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _decrement() {
+    if (counters[currentCounter]! <= 0) {
+      return;
+    }
+
+    _pushUndoSnapshot();
     setState(() {
-      if (counters[currentCounter]! > 0) {
-        counters[currentCounter] = counters[currentCounter]! - 1;
-      }
+      counters[currentCounter] = counters[currentCounter]! - 1;
     });
     _saveCounters();
   }
 
   void _reset() {
+    if (counters[currentCounter] == 0) {
+      return;
+    }
+
+    _pushUndoSnapshot();
     setState(() {
       counters[currentCounter] = 0;
     });
@@ -152,6 +252,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _addCounterToList(String counterName) {
+    _pushUndoSnapshot();
     setState(() {
       counters[counterName] = 0;
       currentCounter = counterName;
@@ -160,6 +261,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _renameCounter(String oldName, String newName) {
+    _pushUndoSnapshot();
     setState(() {
       final value = counters[oldName]!;
       counters.remove(oldName);
@@ -179,6 +281,7 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
+    _pushUndoSnapshot();
     setState(() {
       counters.remove(counterName);
       if (currentCounter == counterName) {
@@ -196,6 +299,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _renameMulatschakPlayer(String oldName, String newName) {
+    _pushUndoSnapshot();
     setState(() {
       final value = mulatschakPlayers[oldName]!;
       mulatschakPlayers.remove(oldName);
@@ -208,6 +312,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _reorderCounters(int oldIndex, int newIndex) {
+    _pushUndoSnapshot();
     setState(() {
       final entries = counters.entries.toList();
       if (newIndex > oldIndex) {
@@ -221,6 +326,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _reorderMulatschakPlayers(int oldIndex, int newIndex) {
+    _pushUndoSnapshot();
     setState(() {
       final entries = mulatschakPlayers.entries.toList();
       if (newIndex > oldIndex) {
@@ -234,6 +340,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _addWattenGame(String gameName) {
+    _pushUndoSnapshot();
     setState(() {
       wattenGames[gameName] = const WattenGame(me: 0, you: 0);
       currentWattenGame = gameName;
@@ -250,6 +357,7 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
+    _pushUndoSnapshot();
     setState(() {
       wattenGames.remove(gameName);
       if (currentWattenGame == gameName) {
@@ -267,6 +375,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _addMulatschakPlayer(String playerName) {
+    _pushUndoSnapshot();
     setState(() {
       mulatschakPlayers[playerName] = 21;
       currentMulatschakPlayer = playerName;
@@ -282,6 +391,7 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
+    _pushUndoSnapshot();
     setState(() {
       mulatschakPlayers.remove(playerName);
       if (currentMulatschakPlayer == playerName) {
@@ -294,11 +404,17 @@ class _HomePageState extends State<HomePage> {
   void _updateMulatschakScore(int baseDelta) {
     final currentValue = mulatschakPlayers[currentMulatschakPlayer]!;
     final delta = baseDelta * mulatschakMultiplier;
-    final nextValue = currentValue + delta;
+    final rawNextValue = currentValue + delta;
 
-    if (nextValue < 0) {
+    if (rawNextValue < 0) {
       return;
     }
+
+    _pushUndoSnapshot();
+    final nextValue =
+        muleqackEnabled
+            ? _applyMuleqackReset(rawNextValue)
+            : rawNextValue;
 
     setState(() {
       mulatschakPlayers[currentMulatschakPlayer] = nextValue;
@@ -306,7 +422,23 @@ class _HomePageState extends State<HomePage> {
     _saveCounters();
   }
 
+  int _applyMuleqackReset(int score) {
+    final resetDifference = muleqackTriggerPoints - muleqackResetPoints;
+
+    if (resetDifference <= 0) {
+      return score;
+    }
+
+    var adjustedScore = score;
+    while (adjustedScore >= muleqackTriggerPoints) {
+      adjustedScore -= resetDifference;
+    }
+
+    return adjustedScore;
+  }
+
   void _resetMulatschakPlayers() {
+    _pushUndoSnapshot();
     setState(() {
       mulatschakPlayers.updateAll((key, value) => 21);
     });
@@ -314,8 +446,49 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _setMulatschakMultiplier(int multiplier) {
+    if (mulatschakMultiplier == multiplier) {
+      return;
+    }
+
+    _pushUndoSnapshot();
     setState(() {
       mulatschakMultiplier = multiplier;
+    });
+    _saveCounters();
+  }
+
+  void _setMuleqackEnabled(bool enabled) {
+    if (muleqackEnabled == enabled) {
+      return;
+    }
+
+    _pushUndoSnapshot();
+    setState(() {
+      muleqackEnabled = enabled;
+    });
+    _saveCounters();
+  }
+
+  void _setMuleqackTriggerPoints(int points) {
+    if (muleqackTriggerPoints == points) {
+      return;
+    }
+
+    _pushUndoSnapshot();
+    setState(() {
+      muleqackTriggerPoints = points;
+    });
+    _saveCounters();
+  }
+
+  void _setMuleqackResetPoints(int points) {
+    if (muleqackResetPoints == points) {
+      return;
+    }
+
+    _pushUndoSnapshot();
+    setState(() {
+      muleqackResetPoints = points;
     });
     _saveCounters();
   }
@@ -330,6 +503,7 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
+    _pushUndoSnapshot();
     setState(() {
       wattenGames[currentWattenGame] =
           selectedWattenSide == WattenSide.me
@@ -370,7 +544,14 @@ class _HomePageState extends State<HomePage> {
 
   void _resetWattenSelectedSide() {
     final currentGame = wattenGames[currentWattenGame]!;
+    final currentValue =
+        selectedWattenSide == WattenSide.me ? currentGame.me : currentGame.you;
 
+    if (currentValue == 0) {
+      return;
+    }
+
+    _pushUndoSnapshot();
     setState(() {
       wattenGames[currentWattenGame] =
           selectedWattenSide == WattenSide.me
@@ -691,6 +872,14 @@ class _HomePageState extends State<HomePage> {
       surfaceTintColor: Colors.transparent,
       actions: [
         Padding(
+          padding: const EdgeInsets.only(right: 4),
+          child: IconButton(
+            icon: const Icon(Icons.undo),
+            onPressed: _undoStack.isEmpty ? null : _undoLastAction,
+            tooltip: 'Undo',
+          ),
+        ),
+        Padding(
           padding: const EdgeInsets.only(right: 8),
           child: IconButton(
             icon: const Icon(Icons.favorite),
@@ -778,6 +967,12 @@ class _HomePageState extends State<HomePage> {
               onThemeModeChanged: widget.onThemeModeChanged,
               currentAppMode: widget.appMode,
               onAppModeChanged: _handleAppModeChanged,
+              muleqackEnabled: muleqackEnabled,
+              muleqackTriggerPoints: muleqackTriggerPoints,
+              muleqackResetPoints: muleqackResetPoints,
+              onMuleqackEnabledChanged: _setMuleqackEnabled,
+              onMuleqackTriggerPointsChanged: _setMuleqackTriggerPoints,
+              onMuleqackResetPointsChanged: _setMuleqackResetPoints,
             ),
           ),
         );

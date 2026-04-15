@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 import '../models/app_mode.dart';
 
-class SettingsPage extends StatelessWidget {
+class SettingsPage extends StatefulWidget {
   final ThemeMode currentThemeMode;
   final ValueChanged<ThemeMode> onThemeModeChanged;
   final AppMode currentAppMode;
   final ValueChanged<AppMode> onAppModeChanged;
+  final bool muleqackEnabled;
+  final int muleqackTriggerPoints;
+  final int muleqackResetPoints;
+  final ValueChanged<bool> onMuleqackEnabledChanged;
+  final ValueChanged<int> onMuleqackTriggerPointsChanged;
+  final ValueChanged<int> onMuleqackResetPointsChanged;
 
   const SettingsPage({
     super.key,
@@ -13,10 +19,109 @@ class SettingsPage extends StatelessWidget {
     required this.onThemeModeChanged,
     required this.currentAppMode,
     required this.onAppModeChanged,
+    required this.muleqackEnabled,
+    required this.muleqackTriggerPoints,
+    required this.muleqackResetPoints,
+    required this.onMuleqackEnabledChanged,
+    required this.onMuleqackTriggerPointsChanged,
+    required this.onMuleqackResetPointsChanged,
   });
 
   @override
+  State<SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends State<SettingsPage> {
+  late final TextEditingController _triggerController;
+  late final TextEditingController _resetController;
+  late bool _muleqackEnabled;
+  late int _muleqackTriggerPoints;
+  late int _muleqackResetPoints;
+
+  @override
+  void initState() {
+    super.initState();
+    _muleqackEnabled = widget.muleqackEnabled;
+    _muleqackTriggerPoints = widget.muleqackTriggerPoints;
+    _muleqackResetPoints = widget.muleqackResetPoints;
+    _triggerController = TextEditingController(
+      text: _muleqackTriggerPoints.toString(),
+    );
+    _resetController = TextEditingController(
+      text: _muleqackResetPoints.toString(),
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant SettingsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.muleqackEnabled != widget.muleqackEnabled) {
+      _muleqackEnabled = widget.muleqackEnabled;
+    }
+
+    if (oldWidget.muleqackTriggerPoints != widget.muleqackTriggerPoints) {
+      _muleqackTriggerPoints = widget.muleqackTriggerPoints;
+      if (_triggerController.text != _muleqackTriggerPoints.toString()) {
+        _triggerController.text = _muleqackTriggerPoints.toString();
+      }
+    }
+
+    if (oldWidget.muleqackResetPoints != widget.muleqackResetPoints) {
+      _muleqackResetPoints = widget.muleqackResetPoints;
+      if (_resetController.text != _muleqackResetPoints.toString()) {
+        _resetController.text = _muleqackResetPoints.toString();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _triggerController.dispose();
+    _resetController.dispose();
+    super.dispose();
+  }
+
+  void _updateTriggerPoints(int points) {
+    setState(() {
+      _muleqackTriggerPoints = points;
+    });
+
+    widget.onMuleqackTriggerPointsChanged(points);
+  }
+
+  void _updateResetPoints(int points) {
+    setState(() {
+      _muleqackResetPoints = points;
+    });
+
+    widget.onMuleqackResetPointsChanged(points);
+  }
+
+  void _submitTriggerPoints() {
+    final parsedValue = int.tryParse(_triggerController.text);
+    if (parsedValue != null && parsedValue > 0) {
+      _updateTriggerPoints(parsedValue);
+      return;
+    }
+
+    _triggerController.text = _muleqackTriggerPoints.toString();
+  }
+
+  void _submitResetPoints() {
+    final parsedValue = int.tryParse(_resetController.text);
+    if (parsedValue != null && parsedValue >= 0) {
+      _updateResetPoints(parsedValue);
+      return;
+    }
+
+    _resetController.text = _muleqackResetPoints.toString();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final showMuleqackSettings = widget.currentAppMode == AppMode.mulatschak;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: ListView(
@@ -27,61 +132,105 @@ class SettingsPage extends StatelessWidget {
           RadioListTile<AppMode>(
             title: const Text('Counter'),
             value: AppMode.counter,
-            groupValue: currentAppMode,
+            groupValue: widget.currentAppMode,
             onChanged: (value) {
               if (value != null) {
-                onAppModeChanged(value);
+                widget.onAppModeChanged(value);
               }
             },
           ),
           RadioListTile<AppMode>(
             title: const Text('Watten'),
             value: AppMode.watten,
-            groupValue: currentAppMode,
+            groupValue: widget.currentAppMode,
             onChanged: (value) {
               if (value != null) {
-                onAppModeChanged(value);
+                widget.onAppModeChanged(value);
               }
             },
           ),
           RadioListTile<AppMode>(
             title: const Text('Mulatschak'),
             value: AppMode.mulatschak,
-            groupValue: currentAppMode,
+            groupValue: widget.currentAppMode,
             onChanged: (value) {
               if (value != null) {
-                onAppModeChanged(value);
+                widget.onAppModeChanged(value);
               }
             },
           ),
+          if (showMuleqackSettings) ...[
+            const Divider(),
+            SwitchListTile(
+              title: const Text('Mulatschak reset'),
+              subtitle: const Text(
+                'Automatically resets a player when the configured score is reached.',
+              ),
+              value: _muleqackEnabled,
+              onChanged: (value) {
+                setState(() {
+                  _muleqackEnabled = value;
+                });
+                widget.onMuleqackEnabledChanged(value);
+              },
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: TextField(
+                controller: _triggerController,
+                enabled: _muleqackEnabled,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Reset when score reaches',
+                  border: OutlineInputBorder(),
+                ),
+                onSubmitted: (_) => _submitTriggerPoints(),
+                onTapOutside: (_) => _submitTriggerPoints(),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: TextField(
+                controller: _resetController,
+                enabled: _muleqackEnabled,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Reset score to',
+                  border: OutlineInputBorder(),
+                ),
+                onSubmitted: (_) => _submitResetPoints(),
+                onTapOutside: (_) => _submitResetPoints(),
+              ),
+            ),
+          ],
           const Divider(),
           RadioListTile<ThemeMode>(
             title: const Text('Light Mode'),
             value: ThemeMode.light,
-            groupValue: currentThemeMode,
+            groupValue: widget.currentThemeMode,
             onChanged: (value) {
               if (value != null) {
-                onThemeModeChanged(value);
+                widget.onThemeModeChanged(value);
               }
             },
           ),
           RadioListTile<ThemeMode>(
             title: const Text('Dark Mode'),
             value: ThemeMode.dark,
-            groupValue: currentThemeMode,
+            groupValue: widget.currentThemeMode,
             onChanged: (value) {
               if (value != null) {
-                onThemeModeChanged(value);
+                widget.onThemeModeChanged(value);
               }
             },
           ),
           RadioListTile<ThemeMode>(
             title: const Text('System Mode'),
             value: ThemeMode.system,
-            groupValue: currentThemeMode,
+            groupValue: widget.currentThemeMode,
             onChanged: (value) {
               if (value != null) {
-                onThemeModeChanged(value);
+                widget.onThemeModeChanged(value);
               }
             },
           ),
