@@ -86,6 +86,45 @@ If desktop support is not enabled yet:
 flutter config --enable-macos-desktop
 ```
 
+## GitHub Releases
+
+The repository includes a GitHub Actions workflow at [.github/workflows/release.yml](/Users/syktox/Documents/Projekte/Counter_App/.github/workflows/release.yml) that can build release artifacts for:
+
+- Android
+- Windows
+- macOS
+- iOS
+
+When you push a version tag such as `v1.1.4`, GitHub Actions will:
+
+1. Build platform artifacts on the appropriate runners.
+2. Collect the commits since the previous tag.
+3. Use those commit messages as the release text.
+4. Create a GitHub Release and attach all generated files.
+
+Create and push a new release tag with:
+
+```bash
+git tag -a v1.1.4 -m "Release v1.1.4"
+git push origin v1.1.4
+```
+
+You can also start the workflow manually from the GitHub Actions tab by providing an existing tag.
+
+The workflow publishes these assets:
+
+- Android APK
+- Android App Bundle (`.aab`)
+- Windows ZIP
+- macOS ZIP
+- iOS unsigned app ZIP
+
+Important note for iOS:
+
+- The workflow builds iOS with `--no-codesign`.
+- That means the iOS artifact is useful as a CI build output, but not as an App Store-ready package.
+- For TestFlight or App Store distribution, you still need Apple signing certificates, provisioning profiles, and an additional signed archive/export step.
+
 ## Tests
 
 The app includes widget and persistence tests for the main user flows across all modes.
