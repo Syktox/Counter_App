@@ -1,60 +1,129 @@
 # Counter
 
-Eine einfache Flutter-App zum Verwalten mehrerer Counter. Sie eignet sich zum Verfolgen von Gewohnheiten, Streaks und Countdown-Zielen.
+A Flutter app for tracking different counters and scoreboards in one place. In addition to classic counters, the app includes a Watten mode and a Mulatschak mode with locally persisted game state.
 
-Dieses Repository enthält die Quellgrafik und Konfigurationen, aber nicht die generierten App-Icons oder andere generierbare Flutter-Artefakte.
+This repository contains the source code, assets, and configuration. Generated Flutter artifacts and platform-specific build outputs are recreated locally.
 
 ## Features
 
-- Mehrere Counter verwalten
-- Counter hinzufügen und umbenennen
-- Einfache Bedienung mit + und - Buttons
-- Reset-Funktion für jeden Counter
-- Counter werden lokal gespeichert und beim nächsten Start wieder geladen
-- Beim ersten Start sind bereits drei Beispiel-Counter vorhanden
+- Three modes in one app: `Counter`, `Watten`, and `Mulatschak`
+- Local persistence for all values via `shared_preferences`
+- Undo support for the most recent action
+- Drawer-based management for creating, selecting, renaming, deleting, and reordering items
+- Settings for app mode, theme, and Mulatschak reset behavior
+- Platform folders included for Android, iOS, Web, Windows, Linux, and macOS
 
-## Verwendung
+## Modes
 
-1. **Counter auswählen**: Öffne die Seitenleiste (Drawer) über das Hamburger-Menü in der AppBar und wähle einen Counter aus.
-2. **Counter hinzufügen**: In der Seitenleiste auf "Neuer Counter" tippen und einen Namen eingeben.
-3. **Counter umbenennen**: In der Seitenleiste auf das Edit-Icon neben dem Counter-Namen tippen.
-4. **Zählen**: Verwende die + und - Buttons, um den Counter zu erhöhen oder zu verringern.
-5. **Reset**: Drücke den Reset-Button, um den Counter auf 0 zurückzusetzen.
+### Counter
 
-## Standard-Counter beim ersten Start
+- Manage multiple counters
+- Add, rename, delete, and reorder counters
+- Track values with `+`, `-`, and `Reset`
+- Default counters on first launch: `Workout streak`, `Days without smoking`, and `Days till my next holidays` with a starting value of `100`
 
-- `Workout streak`
-- `Days without smoking`
-- `Days till my next holidays` mit Startwert `100`
+### Watten
 
-## Installation
+- Manage multiple games in parallel
+- Separate score tracking for `Me` and `You`
+- Quick scoring buttons for `+2` and `+3`
+- Reset only the currently selected side
+- Winner banner when one side has more than `10` points and leads the other side
 
-1. Stelle sicher, dass Flutter installiert ist: [Flutter Installation](https://flutter.dev/docs/get-started/install)
-2. Klone dieses Repository oder lade den Code herunter.
-3. Navigiere zum Projektverzeichnis und führe `flutter pub get` aus.
-4. Erzeuge die plattformspezifischen App-Icons mit `dart run flutter_launcher_icons`.
-5. Starte die App mit `flutter run`.
+### Mulatschak
 
-## Generierte Dateien neu erstellen
+- Manage multiple players
+- Select the active player directly from the player cards
+- Score controls for `-1`, `+1`, and `+5`
+- Multipliers `1x`, `2x`, `4x`, `8x`, `16x`, plus extra values via dropdown
+- Optional Muleqack reset with configurable threshold and reset value
+- Winner banner when a player reaches `0`
 
-Nach einem frischen Klon sollten generierte Dateien lokal neu erzeugt werden:
+## Usage
+
+1. Open the drawer from the menu in the app bar.
+2. Select a counter, game, or player, or create a new one.
+3. Adjust the current value using the controls for the active mode.
+4. Use `Undo` to revert the most recent action.
+5. Open `Settings` to change the mode, theme, and Mulatschak reset settings.
+
+## Requirements
+
+- Flutter SDK
+- Dart SDK compatible with the Flutter version used by the project
+- Xcode for iOS and macOS builds on macOS
+
+## Run Locally
+
+```bash
+flutter pub get
+flutter run
+```
+
+To launch a specific target such as macOS:
+
+```bash
+flutter run -d macos
+```
+
+## Build For macOS
+
+macOS support is already configured in this project. To create a release build:
+
+```bash
+flutter build macos
+```
+
+The generated app bundle will be available at:
+
+```bash
+build/macos/Build/Products/Release/counter_app.app
+```
+
+If desktop support is not enabled yet:
+
+```bash
+flutter config --enable-macos-desktop
+```
+
+## Tests
+
+The app includes widget and persistence tests for the main user flows across all modes.
+
+Run the full test suite with:
+
+```bash
+flutter test
+```
+
+Covered scenarios include:
+
+- Counter: incrementing, resetting, undo, adding, renaming, and deleting counters
+- Watten: updating scores, switching sides, resetting, winner display, and game management
+- Mulatschak: multipliers, winner logic, player management, and Muleqack reset behavior
+- Persistence: default values, save/load roundtrips, and fallback handling for malformed data
+
+## Icons And Generated Files
+
+After a fresh clone, generated files can be recreated locally with:
 
 ```bash
 flutter pub get
 dart run flutter_launcher_icons
 ```
 
-Hinweise:
+Notes:
 
-- Die Launcher-Icons für Android, iOS, Web, Windows und macOS werden aus `assets/icon/app_icon.png` erzeugt.
-- Weitere Flutter-Generierungsdateien wie Plugin-Registrants werden beim ersten Build bzw. Run automatisch wieder erstellt.
+- The launcher icons for Android, iOS, Web, Windows, and macOS are generated from `assets/icon/app_icon.png`.
+- The same source image used for Android is also used for the macOS app icon.
+- Other generated Flutter files such as plugin registrants are recreated automatically during the first build or run.
 
-## Abhängigkeiten
+## Packages Used
 
-- Flutter SDK
-- shared_preferences: Für die lokale Speicherung der Counter
-- flutter_launcher_icons: Für die Generierung der App-Icons
+- `shared_preferences` for local storage
+- `url_launcher` for the donation link
+- `flutter_launcher_icons` for app icon generation
 
-## Beitragen
+## Contributing
 
-Fühle dich frei, Issues zu melden oder Pull Requests zu erstellen.
+Issues and pull requests are welcome.
