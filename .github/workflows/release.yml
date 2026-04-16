@@ -52,7 +52,7 @@ jobs:
           PREVIOUS_TAG="$(git tag --sort=-creatordate | grep -Fxv "${TAG_NAME}" | head -n 1 || true)"
 
           {
-            echo "release_notes<<'EOF'"
+            echo "release_notes<<EOF"
             echo "## Changes"
             echo
             if [[ -n "${PREVIOUS_TAG}" ]]; then
