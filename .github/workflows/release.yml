@@ -3,16 +3,19 @@ name: Build And Release
 on:
   push:
     tags:
-      - 'v*'
-      - '[0-9]+.[0-9]+.[0-9]+'
+      - "v*"
+      - "[0-9]+.[0-9]+.[0-9]+"
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Existing tag to build and release'
+        description: "Existing release tag, for example v1.1.4"
         required: true
 
 permissions:
   contents: write
+
+env:
+  JAVA_VERSION: "17"
 
 jobs:
   prepare_release:
@@ -23,30 +26,37 @@ jobs:
       release_name: ${{ steps.resolve_tag.outputs.release_name }}
       release_notes: ${{ steps.release_notes.outputs.release_notes }}
     steps:
-      - name: Check out code
+      - name: Check out repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.event.inputs.tag || github.ref }}
 
-      - name: Resolve tag metadata
+      - name: Resolve tag
         id: resolve_tag
         shell: bash
         run: |
           if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
-            TAG_NAME="${{ github.event.inputs.tag }}"
+            RAW_TAG="${{ github.event.inputs.tag }}"
           else
-            TAG_NAME="${GITHUB_REF_NAME}"
+            RAW_TAG="${GITHUB_REF_NAME}"
+          fi
+
+          if git rev-parse "refs/tags/${RAW_TAG}" >/dev/null 2>&1; then
+            TAG_NAME="${RAW_TAG}"
+          elif [[ "${RAW_TAG}" != v* ]] && git rev-parse "refs/tags/v${RAW_TAG}" >/dev/null 2>&1; then
+            TAG_NAME="v${RAW_TAG}"
+          else
+            echo "Tag not found: ${RAW_TAG}"
+            exit 1
           fi
 
           echo "tag_name=${TAG_NAME}" >> "${GITHUB_OUTPUT}"
           echo "release_name=Release ${TAG_NAME}" >> "${GITHUB_OUTPUT}"
 
-      - name: Generate release notes from commits
+      - name: Generate release notes
         id: release_notes
         shell: bash
         run: |
-          git fetch --tags --force
           TAG_NAME="${{ steps.resolve_tag.outputs.tag_name }}"
           CURRENT_COMMIT="$(git rev-list -n 1 "${TAG_NAME}")"
           PREVIOUS_TAG="$(git tag --sort=-creatordate | grep -Fxv "${TAG_NAME}" | head -n 1 || true)"
@@ -74,7 +84,7 @@ jobs:
             echo "- macOS ZIP"
             echo "- iOS unsigned app ZIP"
             echo
-            echo "_Note: the iOS artifact is built without code signing and is intended as a CI build artifact. App Store or device distribution still requires Apple signing credentials._"
+            echo "_The iOS artifact is built without code signing. For TestFlight or App Store distribution you still need Apple signing credentials and an export step._"
             echo "EOF"
           } >> "${GITHUB_OUTPUT}"
 
@@ -83,10 +93,16 @@ jobs:
     runs-on: ubuntu-latest
     needs: prepare_release
     steps:
-      - name: Check out code
+      - name: Check out repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.prepare_release.outputs.tag_name }}
+          ref: refs/tags/${{ needs.prepare_release.outputs.tag_name }}
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -97,13 +113,16 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Generate launcher icons
+        run: dart run flutter_launcher_icons
+
       - name: Build Android APK
         run: flutter build apk --release
 
       - name: Build Android App Bundle
         run: flutter build appbundle --release
 
-      - name: Rename Android artifacts
+      - name: Collect Android artifacts
         shell: bash
         run: |
           mkdir -p release-assets
@@ -123,10 +142,16 @@ jobs:
     runs-on: windows-latest
     needs: prepare_release
     steps:
-      - name: Check out code
+      - name: Check out repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.prepare_release.outputs.tag_name }}
+          ref: refs/tags/${{ needs.prepare_release.outputs.tag_name }}
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -139,6 +164,9 @@ jobs:
 
       - name: Install dependencies
         run: flutter pub get
+
+      - name: Generate launcher icons
+        run: dart run flutter_launcher_icons
 
       - name: Build Windows app
         run: flutter build windows --release
@@ -163,10 +191,16 @@ jobs:
     runs-on: macos-latest
     needs: prepare_release
     steps:
-      - name: Check out code
+      - name: Check out repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.prepare_release.outputs.tag_name }}
+          ref: refs/tags/${{ needs.prepare_release.outputs.tag_name }}
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -180,10 +214,14 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Generate launcher icons
+        run: dart run flutter_launcher_icons
+
       - name: Build macOS app
         run: flutter build macos --release
 
       - name: Archive macOS app bundle
+        shell: bash
         run: |
           mkdir -p release-assets
           ditto -c -k --sequesterRsrc --keepParent \
@@ -201,10 +239,16 @@ jobs:
     runs-on: macos-latest
     needs: prepare_release
     steps:
-      - name: Check out code
+      - name: Check out repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.prepare_release.outputs.tag_name }}
+          ref: refs/tags/${{ needs.prepare_release.outputs.tag_name }}
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -215,10 +259,14 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Generate launcher icons
+        run: dart run flutter_launcher_icons
+
       - name: Build unsigned iOS app
         run: flutter build ios --release --no-codesign
 
-      - name: Archive unsigned iOS app
+      - name: Archive iOS app
+        shell: bash
         run: |
           mkdir -p release-assets
           ditto -c -k --sequesterRsrc --keepParent \
@@ -241,13 +289,13 @@ jobs:
       - build_macos
       - build_ios
     steps:
-      - name: Download build artifacts
+      - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: release-assets
           merge-multiple: true
 
-      - name: Create or update GitHub release
+      - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.prepare_release.outputs.tag_name }}

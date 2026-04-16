@@ -109,3 +109,5 @@ web/icons/
 !.env.example
 *.local
 *.orig
+
+devtools_options.yaml
