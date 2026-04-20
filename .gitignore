@@ -73,7 +73,6 @@ ios/Pods/
 ios/Podfile
 ios/Podfile.lock
 *.mobileprovision
-ios/Runner/Assets.xcassets/AppIcon.appiconset/
 ios/build/
 
 # Linux related
@@ -81,7 +80,6 @@ linux/build/
 
 # macOS related
 macos/build/
-macos/Runner/Assets.xcassets/AppIcon.appiconset/
 macos/Flutter/ephemeral/
 macos/Podfile
 macos/Podfile.lock
@@ -109,3 +107,5 @@ web/icons/
 !.env.example
 *.local
 *.orig
+
+devtools_options.yaml
