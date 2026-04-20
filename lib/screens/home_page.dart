@@ -4,7 +4,6 @@ import 'dart:collection';
 import '../models/app_mode.dart';
 import '../models/watten_game.dart';
 import '../services/counter_storage_service.dart';
-import '../services/url_launcher_service.dart';
 import '../widgets/counter_controls.dart';
 import '../widgets/counter_drawer.dart';
 import 'settings_page.dart';
@@ -859,10 +858,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Future<void> _openDonateUrl() async {
-    await UrlLauncherService.openDonateUrl(context);
-  }
-
   AppBar _buildAppBar() {
     return AppBar(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -877,14 +872,6 @@ class _HomePageState extends State<HomePage> {
             icon: const Icon(Icons.undo),
             onPressed: _undoStack.isEmpty ? null : _undoLastAction,
             tooltip: 'Undo',
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(right: 8),
-          child: IconButton(
-            icon: const Icon(Icons.favorite),
-            onPressed: _openDonateUrl,
-            tooltip: 'Donate',
           ),
         ),
       ],
