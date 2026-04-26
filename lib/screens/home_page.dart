@@ -24,6 +24,8 @@ class _HomePageSnapshot {
   final bool muleqackEnabled;
   final int muleqackTriggerPoints;
   final int muleqackResetPoints;
+  final bool counterHistoryEnabled;
+  final Map<String, List<String>> counterHistory;
   final AppMode appMode;
 
   const _HomePageSnapshot({
@@ -40,6 +42,8 @@ class _HomePageSnapshot {
     required this.muleqackEnabled,
     required this.muleqackTriggerPoints,
     required this.muleqackResetPoints,
+    required this.counterHistoryEnabled,
+    required this.counterHistory,
     required this.appMode,
   });
 }
@@ -87,7 +91,13 @@ class _HomePageState extends State<HomePage> {
   int muleqackTriggerPoints =
       CounterStorageService.defaultMuleqackTriggerPoints;
   int muleqackResetPoints = CounterStorageService.defaultMuleqackResetPoints;
-  final List<_HomePageSnapshot> _undoStack = [];
+  bool counterHistoryEnabled =
+      CounterStorageService.defaultCounterHistoryEnabled;
+  Map<String, List<String>> counterHistory = {};
+  final Map<AppMode, List<_HomePageSnapshot>> _undoStacks = {
+    for (final mode in AppMode.values) mode: <_HomePageSnapshot>[],
+  };
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _isLoadingCounters = true;
 
   @override
@@ -116,6 +126,8 @@ class _HomePageState extends State<HomePage> {
       muleqackEnabled = storedData.muleqackEnabled;
       muleqackTriggerPoints = storedData.muleqackTriggerPoints;
       muleqackResetPoints = storedData.muleqackResetPoints;
+      counterHistoryEnabled = storedData.counterHistoryEnabled;
+      counterHistory = _copyCounterHistory(storedData.counterHistory);
       _isLoadingCounters = false;
     });
   }
@@ -134,11 +146,13 @@ class _HomePageState extends State<HomePage> {
       muleqackEnabled: muleqackEnabled,
       muleqackTriggerPoints: muleqackTriggerPoints,
       muleqackResetPoints: muleqackResetPoints,
+      counterHistoryEnabled: counterHistoryEnabled,
+      counterHistory: counterHistory,
       appMode: appMode ?? widget.appMode,
     );
   }
 
-  _HomePageSnapshot _createSnapshot({AppMode? appMode}) {
+  _HomePageSnapshot _createSnapshot() {
     return _HomePageSnapshot(
       counters: LinkedHashMap<String, int>.from(counters),
       currentCounter: currentCounter,
@@ -153,41 +167,59 @@ class _HomePageState extends State<HomePage> {
       muleqackEnabled: muleqackEnabled,
       muleqackTriggerPoints: muleqackTriggerPoints,
       muleqackResetPoints: muleqackResetPoints,
-      appMode: appMode ?? widget.appMode,
+      counterHistoryEnabled: counterHistoryEnabled,
+      counterHistory: _copyCounterHistory(counterHistory),
+      appMode: widget.appMode,
     );
   }
 
-  void _pushUndoSnapshot({AppMode? appMode}) {
-    _undoStack.add(_createSnapshot(appMode: appMode));
+  List<_HomePageSnapshot> get _currentUndoStack => _undoStacks[widget.appMode]!;
+
+  void _pushUndoSnapshot() {
+    _currentUndoStack.add(_createSnapshot());
   }
 
   void _undoLastAction() {
-    if (_undoStack.isEmpty) {
+    final undoStack = _currentUndoStack;
+    if (undoStack.isEmpty) {
       return;
     }
 
-    final snapshot = _undoStack.removeLast();
-    widget.onAppModeChanged(snapshot.appMode);
+    final snapshot = undoStack.removeLast();
     setState(() {
-      counters = LinkedHashMap<String, int>.from(snapshot.counters);
-      currentCounter = snapshot.currentCounter;
-      wattenGames = LinkedHashMap<String, WattenGame>.from(
-        snapshot.wattenGames,
-      );
-      currentWattenGame = snapshot.currentWattenGame;
-      selectedWattenSide = snapshot.selectedWattenSide;
-      mulatschakPlayers = LinkedHashMap<String, int>.from(
-        snapshot.mulatschakPlayers,
-      );
-      currentMulatschakPlayer = snapshot.currentMulatschakPlayer;
-      hosnObePlayers = LinkedHashMap<String, int>.from(snapshot.hosnObePlayers);
-      currentHosnObePlayer = snapshot.currentHosnObePlayer;
-      mulatschakMultiplier = snapshot.mulatschakMultiplier;
-      muleqackEnabled = snapshot.muleqackEnabled;
-      muleqackTriggerPoints = snapshot.muleqackTriggerPoints;
-      muleqackResetPoints = snapshot.muleqackResetPoints;
+      _restoreSnapshotForCurrentMode(snapshot);
     });
-    _saveCounters(appMode: snapshot.appMode);
+    _saveCounters();
+  }
+
+  void _restoreSnapshotForCurrentMode(_HomePageSnapshot snapshot) {
+    switch (widget.appMode) {
+      case AppMode.counter:
+        counters = LinkedHashMap<String, int>.from(snapshot.counters);
+        currentCounter = snapshot.currentCounter;
+        counterHistoryEnabled = snapshot.counterHistoryEnabled;
+        counterHistory = _copyCounterHistory(snapshot.counterHistory);
+      case AppMode.watten:
+        wattenGames = LinkedHashMap<String, WattenGame>.from(
+          snapshot.wattenGames,
+        );
+        currentWattenGame = snapshot.currentWattenGame;
+        selectedWattenSide = snapshot.selectedWattenSide;
+      case AppMode.mulatschak:
+        mulatschakPlayers = LinkedHashMap<String, int>.from(
+          snapshot.mulatschakPlayers,
+        );
+        currentMulatschakPlayer = snapshot.currentMulatschakPlayer;
+        mulatschakMultiplier = snapshot.mulatschakMultiplier;
+        muleqackEnabled = snapshot.muleqackEnabled;
+        muleqackTriggerPoints = snapshot.muleqackTriggerPoints;
+        muleqackResetPoints = snapshot.muleqackResetPoints;
+      case AppMode.hosnObe:
+        hosnObePlayers = LinkedHashMap<String, int>.from(
+          snapshot.hosnObePlayers,
+        );
+        currentHosnObePlayer = snapshot.currentHosnObePlayer;
+    }
   }
 
   void _handleAppModeChanged(AppMode mode) {
@@ -195,7 +227,6 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
-    _pushUndoSnapshot();
     widget.onAppModeChanged(mode);
     _saveCounters(appMode: mode);
   }
@@ -204,6 +235,7 @@ class _HomePageState extends State<HomePage> {
     _pushUndoSnapshot();
     setState(() {
       counters[currentCounter] = counters[currentCounter]! + 1;
+      _recordCounterHistory('increased');
     });
     _saveCounters();
   }
@@ -216,6 +248,7 @@ class _HomePageState extends State<HomePage> {
     _pushUndoSnapshot();
     setState(() {
       counters[currentCounter] = counters[currentCounter]! - 1;
+      _recordCounterHistory('decreased');
     });
     _saveCounters();
   }
@@ -228,8 +261,37 @@ class _HomePageState extends State<HomePage> {
     _pushUndoSnapshot();
     setState(() {
       counters[currentCounter] = 0;
+      _recordCounterHistory('reseted');
     });
     _saveCounters();
+  }
+
+  void _recordCounterHistory(String action) {
+    if (!counterHistoryEnabled) {
+      return;
+    }
+
+    final currentHistory = counterHistory[currentCounter] ?? const <String>[];
+    counterHistory = Map<String, List<String>>.from(counterHistory)
+      ..[currentCounter] = [
+        '${_formatHistoryTime(DateTime.now())} - $action.',
+        ...currentHistory,
+      ];
+  }
+
+  Map<String, List<String>> _copyCounterHistory(
+    Map<String, List<String>> history,
+  ) {
+    return history.map(
+      (counterName, entries) =>
+          MapEntry(counterName, List<String>.from(entries)),
+    );
+  }
+
+  String _formatHistoryTime(DateTime time) {
+    String twoDigits(int value) => value.toString().padLeft(2, '0');
+
+    return '${twoDigits(time.hour)}:${twoDigits(time.minute)}:${twoDigits(time.second)}';
   }
 
   void _selectCounter(String counter) {
@@ -296,9 +358,8 @@ class _HomePageState extends State<HomePage> {
   void _renameCounter(String oldName, String newName) {
     _pushUndoSnapshot();
     setState(() {
-      final value = counters[oldName]!;
-      counters.remove(oldName);
-      counters[newName] = value;
+      counters = _renameCounterEntry(counters, oldName, newName);
+      counterHistory = _renameHistoryEntry(counterHistory, oldName, newName);
       if (currentCounter == oldName) {
         currentCounter = newName;
       }
@@ -317,6 +378,8 @@ class _HomePageState extends State<HomePage> {
     _pushUndoSnapshot();
     setState(() {
       counters.remove(counterName);
+      counterHistory = Map<String, List<String>>.from(counterHistory)
+        ..remove(counterName);
       if (currentCounter == counterName) {
         currentCounter = counters.keys.first;
       }
@@ -334,9 +397,11 @@ class _HomePageState extends State<HomePage> {
   void _renameMulatschakPlayer(String oldName, String newName) {
     _pushUndoSnapshot();
     setState(() {
-      final value = mulatschakPlayers[oldName]!;
-      mulatschakPlayers.remove(oldName);
-      mulatschakPlayers[newName] = value;
+      mulatschakPlayers = _renameCounterEntry(
+        mulatschakPlayers,
+        oldName,
+        newName,
+      );
       if (currentMulatschakPlayer == oldName) {
         currentMulatschakPlayer = newName;
       }
@@ -347,14 +412,42 @@ class _HomePageState extends State<HomePage> {
   void _renameHosnObePlayer(String oldName, String newName) {
     _pushUndoSnapshot();
     setState(() {
-      final value = hosnObePlayers[oldName]!;
-      hosnObePlayers.remove(oldName);
-      hosnObePlayers[newName] = value;
+      hosnObePlayers = _renameCounterEntry(hosnObePlayers, oldName, newName);
       if (currentHosnObePlayer == oldName) {
         currentHosnObePlayer = newName;
       }
     });
     _saveCounters();
+  }
+
+  LinkedHashMap<String, int> _renameCounterEntry(
+    Map<String, int> values,
+    String oldName,
+    String newName,
+  ) {
+    return LinkedHashMap<String, int>.fromEntries(
+      values.entries.map((entry) {
+        if (entry.key == oldName) {
+          return MapEntry(newName, entry.value);
+        }
+        return entry;
+      }),
+    );
+  }
+
+  LinkedHashMap<String, List<String>> _renameHistoryEntry(
+    Map<String, List<String>> values,
+    String oldName,
+    String newName,
+  ) {
+    return LinkedHashMap<String, List<String>>.fromEntries(
+      values.entries.map((entry) {
+        if (entry.key == oldName) {
+          return MapEntry(newName, List<String>.from(entry.value));
+        }
+        return MapEntry(entry.key, List<String>.from(entry.value));
+      }),
+    );
   }
 
   void _reorderCounters(int oldIndex, int newIndex) {
@@ -613,6 +706,18 @@ class _HomePageState extends State<HomePage> {
     _saveCounters();
   }
 
+  void _setCounterHistoryEnabled(bool enabled) {
+    if (counterHistoryEnabled == enabled) {
+      return;
+    }
+
+    _pushUndoSnapshot();
+    setState(() {
+      counterHistoryEnabled = enabled;
+    });
+    _saveCounters();
+  }
+
   void _updateWattenScore(int delta) {
     final currentGame = wattenGames[currentWattenGame]!;
     final currentValue = selectedWattenSide == WattenSide.me
@@ -682,16 +787,31 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _showAddCounterDialog() {
+    final controller = TextEditingController();
+    final focusNode = FocusNode();
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        String newCounterName = '';
+        void submit() {
+          final trimmedName = controller.text.trim();
+          if (_isCounterNameValid(trimmedName)) {
+            _addCounterToList(trimmedName);
+            Navigator.of(context).pop();
+            return;
+          }
+
+          focusNode.requestFocus();
+        }
+
         return AlertDialog(
           title: const Text('Add Counter'),
           content: TextField(
-            onChanged: (value) {
-              newCounterName = value;
-            },
+            controller: controller,
+            focusNode: focusNode,
+            autofocus: true,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => submit(),
             decoration: const InputDecoration(hintText: 'Counter name'),
           ),
           actions: [
@@ -701,15 +821,7 @@ class _HomePageState extends State<HomePage> {
               },
               child: const Text('Cancel'),
             ),
-            TextButton(
-              onPressed: () {
-                if (_isCounterNameValid(newCounterName)) {
-                  _addCounterToList(newCounterName);
-                }
-                Navigator.of(context).pop();
-              },
-              child: const Text('Add'),
-            ),
+            TextButton(onPressed: submit, child: const Text('Add')),
           ],
         );
       },
@@ -717,16 +829,31 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _showAddWattenGameDialog() {
+    final controller = TextEditingController();
+    final focusNode = FocusNode();
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        String newGameName = '';
+        void submit() {
+          final trimmedName = controller.text.trim();
+          if (_isWattenGameNameValid(trimmedName)) {
+            _addWattenGame(trimmedName);
+            Navigator.of(context).pop();
+            return;
+          }
+
+          focusNode.requestFocus();
+        }
+
         return AlertDialog(
           title: const Text('Add Game'),
           content: TextField(
-            onChanged: (value) {
-              newGameName = value.trim();
-            },
+            controller: controller,
+            focusNode: focusNode,
+            autofocus: true,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => submit(),
             decoration: const InputDecoration(hintText: 'Game name'),
           ),
           actions: [
@@ -736,15 +863,7 @@ class _HomePageState extends State<HomePage> {
               },
               child: const Text('Cancel'),
             ),
-            TextButton(
-              onPressed: () {
-                if (_isWattenGameNameValid(newGameName)) {
-                  _addWattenGame(newGameName);
-                }
-                Navigator.of(context).pop();
-              },
-              child: const Text('Add'),
-            ),
+            TextButton(onPressed: submit, child: const Text('Add')),
           ],
         );
       },
@@ -769,42 +888,30 @@ class _HomePageState extends State<HomePage> {
     required bool Function(String playerName) isValidName,
     required ValueChanged<String> onAdd,
   }) {
+    final controller = TextEditingController();
+    final focusNode = FocusNode();
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        String newPlayerName = '';
-        final textController = TextEditingController();
-        final focusNode = FocusNode();
-
         void submit() {
-          final trimmedName = newPlayerName.trim();
+          final trimmedName = controller.text.trim();
           if (isValidName(trimmedName)) {
             onAdd(trimmedName);
             Navigator.of(context).pop();
+            return;
           }
-        }
 
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (focusNode.canRequestFocus) {
-            focusNode.requestFocus();
-          }
-          if (textController.text.isNotEmpty) {
-            textController.selection = TextSelection(
-              baseOffset: 0,
-              extentOffset: textController.text.length,
-            );
-          }
-        });
+          focusNode.requestFocus();
+        }
 
         return AlertDialog(
           title: const Text('Add Player'),
           content: TextField(
-            controller: textController,
+            controller: controller,
             focusNode: focusNode,
             autofocus: true,
-            onChanged: (value) {
-              newPlayerName = value;
-            },
+            textInputAction: TextInputAction.done,
             onSubmitted: (_) => submit(),
             decoration: const InputDecoration(hintText: 'Player name'),
           ),
@@ -874,40 +981,29 @@ class _HomePageState extends State<HomePage> {
     required bool Function(String newName) isValidName,
     required ValueChanged<String> onRename,
   }) {
+    final controller = TextEditingController(text: initialValue)
+      ..selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: initialValue.length,
+      );
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        String newItemName = initialValue;
-        final controller = TextEditingController(text: initialValue);
-        final focusNode = FocusNode();
-
         void submit() {
-          final trimmedName = newItemName.trim();
+          final trimmedName = controller.text.trim();
           if (trimmedName.isNotEmpty && isValidName(trimmedName)) {
             onRename(trimmedName);
             Navigator.of(context).pop();
           }
         }
 
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (focusNode.canRequestFocus) {
-            focusNode.requestFocus();
-          }
-          controller.selection = TextSelection(
-            baseOffset: 0,
-            extentOffset: controller.text.length,
-          );
-        });
-
         return AlertDialog(
           title: Text(title),
           content: TextField(
             controller: controller,
-            focusNode: focusNode,
             autofocus: true,
-            onChanged: (value) {
-              newItemName = value;
-            },
+            textInputAction: TextInputAction.done,
             onSubmitted: (_) => submit(),
             decoration: InputDecoration(hintText: hintText),
           ),
@@ -1031,11 +1127,22 @@ class _HomePageState extends State<HomePage> {
       shadowColor: Colors.transparent,
       surfaceTintColor: Colors.transparent,
       actions: [
+        if (widget.appMode == AppMode.counter && counterHistoryEnabled)
+          Padding(
+            padding: const EdgeInsets.only(right: 4),
+            child: IconButton(
+              icon: const Icon(Icons.history),
+              onPressed: () {
+                _scaffoldKey.currentState?.openEndDrawer();
+              },
+              tooltip: 'Counter history',
+            ),
+          ),
         Padding(
           padding: const EdgeInsets.only(right: 4),
           child: IconButton(
             icon: const Icon(Icons.undo),
-            onPressed: _undoStack.isEmpty ? null : _undoLastAction,
+            onPressed: _currentUndoStack.isEmpty ? null : _undoLastAction,
             tooltip: 'Undo',
           ),
         ),
@@ -1144,13 +1251,46 @@ class _HomePageState extends State<HomePage> {
               muleqackEnabled: muleqackEnabled,
               muleqackTriggerPoints: muleqackTriggerPoints,
               muleqackResetPoints: muleqackResetPoints,
+              counterHistoryEnabled: counterHistoryEnabled,
               onMuleqackEnabledChanged: _setMuleqackEnabled,
               onMuleqackTriggerPointsChanged: _setMuleqackTriggerPoints,
               onMuleqackResetPointsChanged: _setMuleqackResetPoints,
+              onCounterHistoryEnabledChanged: _setCounterHistoryEnabled,
             ),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildHistoryDrawer() {
+    final currentHistory = counterHistory[currentCounter] ?? const <String>[];
+
+    return Drawer(
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.history),
+              title: const Text('Counter history'),
+              subtitle: Text(currentCounter),
+            ),
+            const Divider(),
+            Expanded(
+              child: currentHistory.isEmpty
+                  ? const Center(child: Text('No counter changes yet.'))
+                  : ListView.separated(
+                      itemCount: currentHistory.length,
+                      separatorBuilder: (context, index) => const Divider(),
+                      itemBuilder: (context, index) {
+                        return ListTile(title: Text(currentHistory[index]));
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1642,8 +1782,12 @@ class _HomePageState extends State<HomePage> {
             defaultTargetPlatform == TargetPlatform.iOS);
 
     return Scaffold(
+      key: _scaffoldKey,
       appBar: _buildAppBar(),
       drawer: _buildDrawer(),
+      endDrawer: widget.appMode == AppMode.counter && counterHistoryEnabled
+          ? _buildHistoryDrawer()
+          : null,
       drawerEdgeDragWidth: isMobileDrawerGesture ? screenWidth * 0.5 : null,
       body: widget.appMode == AppMode.watten
           ? _buildWattenBody()

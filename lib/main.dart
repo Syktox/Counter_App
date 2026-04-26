@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'models/app_mode.dart';
 import 'screens/home_page.dart';
 
@@ -13,9 +16,33 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   ThemeMode _themeMode = ThemeMode.system;
   AppMode _appMode = AppMode.counter;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _syncKeyboardState();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _syncKeyboardState();
+    }
+  }
+
+  void _syncKeyboardState() {
+    unawaited(HardwareKeyboard.instance.syncKeyboardState());
+  }
 
   void _updateThemeMode(ThemeMode mode) {
     setState(() {
@@ -40,7 +67,10 @@ class _MyAppState extends State<MyApp> {
         brightness: Brightness.light,
       ),
       darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple, brightness: Brightness.dark),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.deepPurple,
+          brightness: Brightness.dark,
+        ),
         useMaterial3: true,
         brightness: Brightness.dark,
       ),

@@ -9,9 +9,11 @@ class SettingsPage extends StatefulWidget {
   final bool muleqackEnabled;
   final int muleqackTriggerPoints;
   final int muleqackResetPoints;
+  final bool counterHistoryEnabled;
   final ValueChanged<bool> onMuleqackEnabledChanged;
   final ValueChanged<int> onMuleqackTriggerPointsChanged;
   final ValueChanged<int> onMuleqackResetPointsChanged;
+  final ValueChanged<bool> onCounterHistoryEnabledChanged;
 
   const SettingsPage({
     super.key,
@@ -22,9 +24,11 @@ class SettingsPage extends StatefulWidget {
     required this.muleqackEnabled,
     required this.muleqackTriggerPoints,
     required this.muleqackResetPoints,
+    required this.counterHistoryEnabled,
     required this.onMuleqackEnabledChanged,
     required this.onMuleqackTriggerPointsChanged,
     required this.onMuleqackResetPointsChanged,
+    required this.onCounterHistoryEnabledChanged,
   });
 
   @override
@@ -37,6 +41,7 @@ class _SettingsPageState extends State<SettingsPage> {
   late bool _muleqackEnabled;
   late int _muleqackTriggerPoints;
   late int _muleqackResetPoints;
+  late bool _counterHistoryEnabled;
 
   @override
   void initState() {
@@ -44,6 +49,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _muleqackEnabled = widget.muleqackEnabled;
     _muleqackTriggerPoints = widget.muleqackTriggerPoints;
     _muleqackResetPoints = widget.muleqackResetPoints;
+    _counterHistoryEnabled = widget.counterHistoryEnabled;
     _triggerController = TextEditingController(
       text: _muleqackTriggerPoints.toString(),
     );
@@ -72,6 +78,10 @@ class _SettingsPageState extends State<SettingsPage> {
       if (_resetController.text != _muleqackResetPoints.toString()) {
         _resetController.text = _muleqackResetPoints.toString();
       }
+    }
+
+    if (oldWidget.counterHistoryEnabled != widget.counterHistoryEnabled) {
+      _counterHistoryEnabled = widget.counterHistoryEnabled;
     }
   }
 
@@ -121,6 +131,7 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     final showMuleqackSettings = widget.currentAppMode == AppMode.mulatschak;
+    final showCounterSettings = widget.currentAppMode == AppMode.counter;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
@@ -155,6 +166,22 @@ class _SettingsPageState extends State<SettingsPage> {
               ],
             ),
           ),
+          if (showCounterSettings) ...[
+            const Divider(),
+            SwitchListTile(
+              title: const Text('Counter history'),
+              subtitle: const Text(
+                'Shows a history button with the latest counter changes.',
+              ),
+              value: _counterHistoryEnabled,
+              onChanged: (value) {
+                setState(() {
+                  _counterHistoryEnabled = value;
+                });
+                widget.onCounterHistoryEnabledChanged(value);
+              },
+            ),
+          ],
           if (showMuleqackSettings) ...[
             const Divider(),
             SwitchListTile(

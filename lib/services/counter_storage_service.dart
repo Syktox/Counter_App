@@ -18,6 +18,8 @@ class CounterStorageData {
   final bool muleqackEnabled;
   final int muleqackTriggerPoints;
   final int muleqackResetPoints;
+  final bool counterHistoryEnabled;
+  final Map<String, List<String>> counterHistory;
   final AppMode appMode;
 
   const CounterStorageData({
@@ -33,6 +35,8 @@ class CounterStorageData {
     required this.muleqackEnabled,
     required this.muleqackTriggerPoints,
     required this.muleqackResetPoints,
+    required this.counterHistoryEnabled,
+    required this.counterHistory,
     required this.appMode,
   });
 }
@@ -50,6 +54,8 @@ class CounterStorageService {
   static const String _muleqackEnabledKey = 'muleqack_enabled';
   static const String _muleqackTriggerPointsKey = 'muleqack_trigger_points';
   static const String _muleqackResetPointsKey = 'muleqack_reset_points';
+  static const String _counterHistoryEnabledKey = 'counter_history_enabled';
+  static const String _counterHistoryKey = 'counter_history';
   static const String _appModeKey = 'app_mode';
 
   static const Map<String, int> defaultCounters = {
@@ -78,6 +84,7 @@ class CounterStorageService {
   static const bool defaultMuleqackEnabled = false;
   static const int defaultMuleqackTriggerPoints = 100;
   static const int defaultMuleqackResetPoints = 50;
+  static const bool defaultCounterHistoryEnabled = false;
   static const AppMode defaultAppMode = AppMode.counter;
 
   static Future<CounterStorageData> load() async {
@@ -98,6 +105,9 @@ class CounterStorageService {
     final storedMuleqackEnabled = prefs.getBool(_muleqackEnabledKey);
     final storedMuleqackTriggerPoints = prefs.getInt(_muleqackTriggerPointsKey);
     final storedMuleqackResetPoints = prefs.getInt(_muleqackResetPointsKey);
+    final storedCounterHistoryEnabled = prefs.getBool(
+      _counterHistoryEnabledKey,
+    );
     final storedAppMode = prefs.getString(_appModeKey);
 
     final counters = _decodeCounters(countersJson);
@@ -138,6 +148,9 @@ class CounterStorageService {
         storedMuleqackResetPoints != null && storedMuleqackResetPoints >= 0
         ? storedMuleqackResetPoints
         : defaultMuleqackResetPoints;
+    final counterHistoryEnabled =
+        storedCounterHistoryEnabled ?? defaultCounterHistoryEnabled;
+    final counterHistory = _loadCounterHistory(prefs, currentCounter);
 
     return CounterStorageData(
       counters: counters,
@@ -152,6 +165,8 @@ class CounterStorageService {
       muleqackEnabled: muleqackEnabled,
       muleqackTriggerPoints: muleqackTriggerPoints,
       muleqackResetPoints: muleqackResetPoints,
+      counterHistoryEnabled: counterHistoryEnabled,
+      counterHistory: counterHistory,
       appMode: appMode,
     );
   }
@@ -169,6 +184,8 @@ class CounterStorageService {
     required bool muleqackEnabled,
     required int muleqackTriggerPoints,
     required int muleqackResetPoints,
+    required bool counterHistoryEnabled,
+    required Map<String, List<String>> counterHistory,
     required AppMode appMode,
   }) async {
     final prefs = await SharedPreferences.getInstance();
@@ -189,7 +206,59 @@ class CounterStorageService {
     await prefs.setBool(_muleqackEnabledKey, muleqackEnabled);
     await prefs.setInt(_muleqackTriggerPointsKey, muleqackTriggerPoints);
     await prefs.setInt(_muleqackResetPointsKey, muleqackResetPoints);
+    await prefs.setBool(_counterHistoryEnabledKey, counterHistoryEnabled);
+    await prefs.setString(_counterHistoryKey, jsonEncode(counterHistory));
     await prefs.setString(_appModeKey, appMode.name);
+  }
+
+  static Map<String, List<String>> _loadCounterHistory(
+    SharedPreferences prefs,
+    String currentCounter,
+  ) {
+    try {
+      return _decodeCounterHistory(prefs.getString(_counterHistoryKey));
+    } on TypeError {
+      return _decodeLegacyCounterHistory(
+        prefs.getStringList(_counterHistoryKey),
+        currentCounter,
+      );
+    }
+  }
+
+  static Map<String, List<String>> _decodeLegacyCounterHistory(
+    List<String>? history,
+    String currentCounter,
+  ) {
+    if (history == null || history.isEmpty) {
+      return <String, List<String>>{};
+    }
+
+    return <String, List<String>>{currentCounter: List<String>.from(history)};
+  }
+
+  static Map<String, List<String>> _decodeCounterHistory(String? historyJson) {
+    if (historyJson == null || historyJson.isEmpty) {
+      return <String, List<String>>{};
+    }
+
+    try {
+      final decoded = jsonDecode(historyJson);
+      if (decoded is! Map<String, dynamic>) {
+        return <String, List<String>>{};
+      }
+
+      return decoded.map((key, value) {
+        if (value is List) {
+          return MapEntry(
+            key,
+            value.whereType<String>().toList(growable: false),
+          );
+        }
+        return MapEntry(key, <String>[]);
+      });
+    } catch (_) {
+      return <String, List<String>>{};
+    }
   }
 
   static Map<String, int> _decodeCounters(

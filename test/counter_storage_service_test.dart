@@ -28,6 +28,11 @@ void main() {
         data.currentHosnObePlayer,
         CounterStorageService.defaultCurrentHosnObePlayer,
       );
+      expect(
+        data.counterHistoryEnabled,
+        CounterStorageService.defaultCounterHistoryEnabled,
+      );
+      expect(data.counterHistory, isEmpty);
       expect(data.appMode, AppMode.counter);
     });
 
@@ -47,6 +52,10 @@ void main() {
         muleqackEnabled: true,
         muleqackTriggerPoints: 100,
         muleqackResetPoints: 50,
+        counterHistoryEnabled: true,
+        counterHistory: const {
+          'Focus': ['14:30:21 - increased.'],
+        },
         appMode: AppMode.mulatschak,
       );
 
@@ -65,6 +74,10 @@ void main() {
       expect(data.muleqackEnabled, isTrue);
       expect(data.muleqackTriggerPoints, 100);
       expect(data.muleqackResetPoints, 50);
+      expect(data.counterHistoryEnabled, isTrue);
+      expect(data.counterHistory, {
+        'Focus': ['14:30:21 - increased.'],
+      });
       expect(data.appMode, AppMode.mulatschak);
     });
 
@@ -84,6 +97,10 @@ void main() {
         'muleqack_enabled': true,
         'muleqack_trigger_points': 0,
         'muleqack_reset_points': -5,
+        'counter_history_enabled': true,
+        'counter_history': jsonEncode({
+          'Counter': ['14:30:21 - Counter increased.'],
+        }),
         'app_mode': 'unknown-mode',
       });
 
@@ -121,7 +138,42 @@ void main() {
         data.muleqackResetPoints,
         CounterStorageService.defaultMuleqackResetPoints,
       );
+      expect(data.counterHistoryEnabled, isTrue);
+      expect(data.counterHistory, {
+        'Counter': ['14:30:21 - Counter increased.'],
+      });
       expect(data.appMode, CounterStorageService.defaultAppMode);
+    });
+
+    test('migrates legacy flat counter history lists', () async {
+      SharedPreferences.setMockInitialValues({
+        'counters': jsonEncode({'Focus': 3}),
+        'current_counter': 'Focus',
+        'counter_history_enabled': true,
+        'counter_history': <String>[
+          '14:30:21 - Focus increased.',
+          '14:29:10 - Focus decreased.',
+        ],
+      });
+
+      final data = await CounterStorageService.load();
+
+      expect(data.counterHistoryEnabled, isTrue);
+      expect(data.counterHistory, {
+        'Focus': ['14:30:21 - Focus increased.', '14:29:10 - Focus decreased.'],
+      });
+    });
+
+    test('ignores malformed counter history safely', () async {
+      SharedPreferences.setMockInitialValues({
+        'counter_history_enabled': true,
+        'counter_history': 'not-json',
+      });
+
+      final data = await CounterStorageService.load();
+
+      expect(data.counterHistoryEnabled, isTrue);
+      expect(data.counterHistory, isEmpty);
     });
   });
 }
