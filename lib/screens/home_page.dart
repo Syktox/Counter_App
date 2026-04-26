@@ -394,6 +394,24 @@ class _HomePageState extends State<HomePage> {
     _saveCounters();
   }
 
+  void _renameWattenGame(String oldName, String newName) {
+    _pushUndoSnapshot();
+    setState(() {
+      wattenGames = LinkedHashMap<String, WattenGame>.fromEntries(
+        wattenGames.entries.map((entry) {
+          if (entry.key == oldName) {
+            return MapEntry(newName, entry.value);
+          }
+          return entry;
+        }),
+      );
+      if (currentWattenGame == oldName) {
+        currentWattenGame = newName;
+      }
+    });
+    _saveCounters();
+  }
+
   void _renameMulatschakPlayer(String oldName, String newName) {
     _pushUndoSnapshot();
     setState(() {
@@ -488,6 +506,20 @@ class _HomePageState extends State<HomePage> {
       final movedEntry = entries.removeAt(oldIndex);
       entries.insert(newIndex, movedEntry);
       hosnObePlayers = LinkedHashMap<String, int>.fromEntries(entries);
+    });
+    _saveCounters();
+  }
+
+  void _reorderWattenGames(int oldIndex, int newIndex) {
+    _pushUndoSnapshot();
+    setState(() {
+      final entries = wattenGames.entries.toList();
+      if (newIndex > oldIndex) {
+        newIndex -= 1;
+      }
+      final movedEntry = entries.removeAt(oldIndex);
+      entries.insert(newIndex, movedEntry);
+      wattenGames = LinkedHashMap<String, WattenGame>.fromEntries(entries);
     });
     _saveCounters();
   }
@@ -934,6 +966,7 @@ class _HomePageState extends State<HomePage> {
       title: 'Rename Counter',
       initialValue: oldName,
       hintText: 'New counter name',
+      duplicateNameMessage: 'This counter name can only be used once.',
       isValidName: (newName) =>
           newName == oldName || _isCounterNameValid(newName),
       onRename: (newName) {
@@ -944,11 +977,28 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  void _showRenameWattenGameDialog(String oldName) {
+    _showRenameItemDialog(
+      title: 'Rename Game',
+      initialValue: oldName,
+      hintText: 'New game name',
+      duplicateNameMessage: 'This game name can only be used once.',
+      isValidName: (newName) =>
+          newName == oldName || _isWattenGameNameValid(newName),
+      onRename: (newName) {
+        if (newName != oldName) {
+          _renameWattenGame(oldName, newName);
+        }
+      },
+    );
+  }
+
   void _showRenameMulatschakPlayerDialog(String oldName) {
     _showRenameItemDialog(
       title: 'Rename Player',
       initialValue: oldName,
       hintText: 'New player name',
+      duplicateNameMessage: 'This player name can only be used once.',
       isValidName: (newName) =>
           newName == oldName || _isMulatschakPlayerNameValid(newName),
       onRename: (newName) {
@@ -964,6 +1014,7 @@ class _HomePageState extends State<HomePage> {
       title: 'Rename Player',
       initialValue: oldName,
       hintText: 'New player name',
+      duplicateNameMessage: 'This player name can only be used once.',
       isValidName: (newName) =>
           newName == oldName || _isHosnObePlayerNameValid(newName),
       onRename: (newName) {
@@ -978,9 +1029,11 @@ class _HomePageState extends State<HomePage> {
     required String title,
     required String initialValue,
     required String hintText,
+    required String duplicateNameMessage,
     required bool Function(String newName) isValidName,
     required ValueChanged<String> onRename,
   }) {
+    final focusNode = FocusNode();
     final controller = TextEditingController(text: initialValue)
       ..selection = TextSelection(
         baseOffset: 0,
@@ -995,6 +1048,15 @@ class _HomePageState extends State<HomePage> {
           if (trimmedName.isNotEmpty && isValidName(trimmedName)) {
             onRename(trimmedName);
             Navigator.of(context).pop();
+            return;
+          }
+
+          focusNode.requestFocus();
+
+          if (trimmedName.isNotEmpty) {
+            ScaffoldMessenger.of(this.context).showSnackBar(
+              SnackBar(content: Text(duplicateNameMessage)),
+            );
           }
         }
 
@@ -1002,6 +1064,7 @@ class _HomePageState extends State<HomePage> {
           title: Text(title),
           content: TextField(
             controller: controller,
+            focusNode: focusNode,
             autofocus: true,
             textInputAction: TextInputAction.done,
             onSubmitted: (_) => submit(),
@@ -1184,7 +1247,7 @@ class _HomePageState extends State<HomePage> {
           ? Icons.person_add_alt_1
           : Icons.add,
       closeDrawerOnAdd: !isPlayerMode,
-      enableReorder: !isWattenMode,
+      enableReorder: true,
       onAddNewItem: isWattenMode
           ? _showAddWattenGameDialog
           : isMulatschakMode
@@ -1208,7 +1271,9 @@ class _HomePageState extends State<HomePage> {
         _selectCounter(item);
       },
       onRenameItem: isWattenMode
-          ? null
+          ? (game) {
+              _showRenameWattenGameDialog(game);
+            }
           : isMulatschakMode
           ? (player) {
               _showRenameMulatschakPlayerDialog(player);
@@ -1236,7 +1301,7 @@ class _HomePageState extends State<HomePage> {
         _showDeleteCounterDialog(item);
       },
       onReorderItems: isWattenMode
-          ? null
+          ? _reorderWattenGames
           : isMulatschakMode
           ? _reorderMulatschakPlayers
           : isHosnObeMode
