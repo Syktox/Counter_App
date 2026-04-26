@@ -1036,6 +1036,7 @@ class _HomePageState extends State<HomePage> {
               child: const Text('Cancel'),
             ),
             TextButton(
+              autofocus: true,
               onPressed: () {
                 _deleteCounter(counterName);
                 Navigator.of(context).pop();
@@ -1107,6 +1108,7 @@ class _HomePageState extends State<HomePage> {
               child: const Text('Cancel'),
             ),
             TextButton(
+              autofocus: true,
               onPressed: () {
                 onDelete(playerName);
                 Navigator.of(context).pop();
