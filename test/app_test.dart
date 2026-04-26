@@ -243,6 +243,76 @@ void main() {
       expect(find.text('100'), findsNothing);
     });
   });
+
+  group('Hosn Obe mode', () {
+    testWidgets('supports winner detection and reset to four lives', (
+      tester,
+    ) async {
+      await _pumpApp(
+        tester,
+        sharedPreferences: {
+          'app_mode': 'hosnObe',
+          'hosn_obe_players': jsonEncode({
+            'Player 1': 1,
+            'Player 2': 1,
+          }),
+          'current_hosn_obe_player': 'Player 1',
+        },
+      );
+
+      expect(find.text('1'), findsNWidgets(2));
+
+      await tester.tap(find.text('-1'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Player 2 wins'), findsOneWidget);
+
+      await tester.tap(find.text('Reset'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('4'), findsNWidgets(2));
+      expect(find.text('Player 2 wins'), findsNothing);
+    });
+
+    testWidgets('supports adding, renaming and deleting players', (
+      tester,
+    ) async {
+      await _pumpApp(
+        tester,
+        sharedPreferences: {
+          'app_mode': 'hosnObe',
+        },
+      );
+
+      await _openDrawer(tester);
+      await tester.tap(find.text('Add Player'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'Chris');
+      await tester.tap(find.widgetWithText(TextButton, 'Add'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Chris'), findsWidgets);
+
+      await tester.tap(_drawerActionForItem('Chris', 'Rename item'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'Alex');
+      await tester.tap(find.widgetWithText(TextButton, 'Rename'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Alex'), findsWidgets);
+
+      await tester.tap(_drawerActionForItem('Alex', 'Delete item'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(TextButton, 'Delete'));
+      await tester.pumpAndSettle();
+
+      await _closeDrawer(tester);
+
+      expect(find.text('Alex'), findsNothing);
+      expect(find.text('Player 1'), findsOneWidget);
+    });
+  });
 }
 
 Future<void> _pumpApp(

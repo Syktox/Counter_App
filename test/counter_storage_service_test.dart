@@ -15,10 +15,18 @@ void main() {
 
       expect(data.counters, CounterStorageService.defaultCounters);
       expect(data.currentCounter, CounterStorageService.defaultCurrentCounter);
-      expect(data.wattenGames.keys, CounterStorageService.defaultWattenGames.keys);
+      expect(
+        data.wattenGames.keys,
+        CounterStorageService.defaultWattenGames.keys,
+      );
       expect(
         data.currentMulatschakPlayer,
         CounterStorageService.defaultCurrentMulatschakPlayer,
+      );
+      expect(data.hosnObePlayers, CounterStorageService.defaultHosnObePlayers);
+      expect(
+        data.currentHosnObePlayer,
+        CounterStorageService.defaultCurrentHosnObePlayer,
       );
       expect(data.appMode, AppMode.counter);
     });
@@ -33,6 +41,8 @@ void main() {
         currentWattenGame: 'Final',
         mulatschakPlayers: const {'Anna': 12, 'Ben': 8},
         currentMulatschakPlayer: 'Ben',
+        hosnObePlayers: const {'Anna': 4, 'Ben': 2},
+        currentHosnObePlayer: 'Anna',
         mulatschakMultiplier: 4,
         muleqackEnabled: true,
         muleqackTriggerPoints: 100,
@@ -49,6 +59,8 @@ void main() {
       expect(data.currentWattenGame, 'Final');
       expect(data.mulatschakPlayers, {'Anna': 12, 'Ben': 8});
       expect(data.currentMulatschakPlayer, 'Ben');
+      expect(data.hosnObePlayers, {'Anna': 4, 'Ben': 2});
+      expect(data.currentHosnObePlayer, 'Anna');
       expect(data.mulatschakMultiplier, 4);
       expect(data.muleqackEnabled, isTrue);
       expect(data.muleqackTriggerPoints, 100);
@@ -66,6 +78,8 @@ void main() {
         'current_watten_game': 'Spiel 1',
         'mulatschak_players': jsonEncode(<String, dynamic>{}),
         'current_mulatschak_player': 'Nobody',
+        'hosn_obe_players': jsonEncode(<String, dynamic>{}),
+        'current_hosn_obe_player': 'Nobody',
         'mulatschak_multiplier': -2,
         'muleqack_enabled': true,
         'muleqack_trigger_points': 0,
@@ -81,10 +95,18 @@ void main() {
       expect(data.wattenGames['Game 1']?.me, 2);
       expect(data.wattenGames['Game 1']?.you, 1);
       expect(data.currentWattenGame, 'Game 1');
-      expect(data.mulatschakPlayers, CounterStorageService.defaultMulatschakPlayers);
+      expect(
+        data.mulatschakPlayers,
+        CounterStorageService.defaultMulatschakPlayers,
+      );
       expect(
         data.currentMulatschakPlayer,
         CounterStorageService.defaultCurrentMulatschakPlayer,
+      );
+      expect(data.hosnObePlayers, CounterStorageService.defaultHosnObePlayers);
+      expect(
+        data.currentHosnObePlayer,
+        CounterStorageService.defaultCurrentHosnObePlayer,
       );
       expect(
         data.mulatschakMultiplier,

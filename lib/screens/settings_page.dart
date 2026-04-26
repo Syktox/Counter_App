@@ -126,38 +126,34 @@ class _SettingsPageState extends State<SettingsPage> {
       appBar: AppBar(title: const Text('Settings')),
       body: ListView(
         children: [
-          const ListTile(
-            title: Text('Modus'),
-          ),
-          RadioListTile<AppMode>(
-            title: const Text('Counter'),
-            value: AppMode.counter,
+          const ListTile(title: Text('Modus')),
+          RadioGroup<AppMode>(
             groupValue: widget.currentAppMode,
             onChanged: (value) {
               if (value != null) {
                 widget.onAppModeChanged(value);
               }
             },
-          ),
-          RadioListTile<AppMode>(
-            title: const Text('Watten'),
-            value: AppMode.watten,
-            groupValue: widget.currentAppMode,
-            onChanged: (value) {
-              if (value != null) {
-                widget.onAppModeChanged(value);
-              }
-            },
-          ),
-          RadioListTile<AppMode>(
-            title: const Text('Mulatschak'),
-            value: AppMode.mulatschak,
-            groupValue: widget.currentAppMode,
-            onChanged: (value) {
-              if (value != null) {
-                widget.onAppModeChanged(value);
-              }
-            },
+            child: const Column(
+              children: [
+                RadioListTile<AppMode>(
+                  title: Text('Counter'),
+                  value: AppMode.counter,
+                ),
+                RadioListTile<AppMode>(
+                  title: Text('Watten'),
+                  value: AppMode.watten,
+                ),
+                RadioListTile<AppMode>(
+                  title: Text('Mulatschak'),
+                  value: AppMode.mulatschak,
+                ),
+                RadioListTile<AppMode>(
+                  title: Text('Hosn Obe'),
+                  value: AppMode.hosnObe,
+                ),
+              ],
+            ),
           ),
           if (showMuleqackSettings) ...[
             const Divider(),
@@ -204,35 +200,29 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ],
           const Divider(),
-          RadioListTile<ThemeMode>(
-            title: const Text('Light Mode'),
-            value: ThemeMode.light,
+          RadioGroup<ThemeMode>(
             groupValue: widget.currentThemeMode,
             onChanged: (value) {
               if (value != null) {
                 widget.onThemeModeChanged(value);
               }
             },
-          ),
-          RadioListTile<ThemeMode>(
-            title: const Text('Dark Mode'),
-            value: ThemeMode.dark,
-            groupValue: widget.currentThemeMode,
-            onChanged: (value) {
-              if (value != null) {
-                widget.onThemeModeChanged(value);
-              }
-            },
-          ),
-          RadioListTile<ThemeMode>(
-            title: const Text('System Mode'),
-            value: ThemeMode.system,
-            groupValue: widget.currentThemeMode,
-            onChanged: (value) {
-              if (value != null) {
-                widget.onThemeModeChanged(value);
-              }
-            },
+            child: const Column(
+              children: [
+                RadioListTile<ThemeMode>(
+                  title: Text('Light Mode'),
+                  value: ThemeMode.light,
+                ),
+                RadioListTile<ThemeMode>(
+                  title: Text('Dark Mode'),
+                  value: ThemeMode.dark,
+                ),
+                RadioListTile<ThemeMode>(
+                  title: Text('System Mode'),
+                  value: ThemeMode.system,
+                ),
+              ],
+            ),
           ),
         ],
       ),

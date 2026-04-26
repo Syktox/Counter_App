@@ -1,7 +1,8 @@
 enum AppMode {
   counter('Counter'),
   watten('Watten'),
-  mulatschak('Mulatschak');
+  mulatschak('Mulatschak'),
+  hosnObe('Hosn Obe');
 
   const AppMode(this.label);
 

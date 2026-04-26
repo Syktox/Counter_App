@@ -12,6 +12,8 @@ class CounterStorageData {
   final String currentWattenGame;
   final Map<String, int> mulatschakPlayers;
   final String currentMulatschakPlayer;
+  final Map<String, int> hosnObePlayers;
+  final String currentHosnObePlayer;
   final int mulatschakMultiplier;
   final bool muleqackEnabled;
   final int muleqackTriggerPoints;
@@ -25,6 +27,8 @@ class CounterStorageData {
     required this.currentWattenGame,
     required this.mulatschakPlayers,
     required this.currentMulatschakPlayer,
+    required this.hosnObePlayers,
+    required this.currentHosnObePlayer,
     required this.mulatschakMultiplier,
     required this.muleqackEnabled,
     required this.muleqackTriggerPoints,
@@ -40,6 +44,8 @@ class CounterStorageService {
   static const String _currentWattenGameKey = 'current_watten_game';
   static const String _mulatschakPlayersKey = 'mulatschak_players';
   static const String _currentMulatschakPlayerKey = 'current_mulatschak_player';
+  static const String _hosnObePlayersKey = 'hosn_obe_players';
+  static const String _currentHosnObePlayerKey = 'current_hosn_obe_player';
   static const String _mulatschakMultiplierKey = 'mulatschak_multiplier';
   static const String _muleqackEnabledKey = 'muleqack_enabled';
   static const String _muleqackTriggerPointsKey = 'muleqack_trigger_points';
@@ -63,6 +69,11 @@ class CounterStorageService {
     'Player 2': 21,
   };
   static const String defaultCurrentMulatschakPlayer = 'Player 1';
+  static const Map<String, int> defaultHosnObePlayers = {
+    'Player 1': 4,
+    'Player 2': 4,
+  };
+  static const String defaultCurrentHosnObePlayer = 'Player 1';
   static const int defaultMulatschakMultiplier = 1;
   static const bool defaultMuleqackEnabled = false;
   static const int defaultMuleqackTriggerPoints = 100;
@@ -79,6 +90,10 @@ class CounterStorageService {
     final storedCurrentMulatschakPlayer = prefs.getString(
       _currentMulatschakPlayerKey,
     );
+    final hosnObePlayersJson = prefs.getString(_hosnObePlayersKey);
+    final storedCurrentHosnObePlayer = prefs.getString(
+      _currentHosnObePlayerKey,
+    );
     final storedMulatschakMultiplier = prefs.getInt(_mulatschakMultiplierKey);
     final storedMuleqackEnabled = prefs.getBool(_muleqackEnabledKey);
     final storedMuleqackTriggerPoints = prefs.getInt(_muleqackTriggerPointsKey);
@@ -91,32 +106,38 @@ class CounterStorageService {
       mulatschakPlayersJson,
       fallback: defaultMulatschakPlayers,
     );
-    final currentCounter =
-        counters.containsKey(storedCurrentCounter)
-            ? storedCurrentCounter!
-            : counters.keys.first;
-    final currentWattenGame =
-        wattenGames.containsKey(storedCurrentWattenGame)
-            ? storedCurrentWattenGame!
-            : wattenGames.keys.first;
+    final hosnObePlayers = _decodeCounters(
+      hosnObePlayersJson,
+      fallback: defaultHosnObePlayers,
+    );
+    final currentCounter = counters.containsKey(storedCurrentCounter)
+        ? storedCurrentCounter!
+        : counters.keys.first;
+    final currentWattenGame = wattenGames.containsKey(storedCurrentWattenGame)
+        ? storedCurrentWattenGame!
+        : wattenGames.keys.first;
     final currentMulatschakPlayer =
         mulatschakPlayers.containsKey(storedCurrentMulatschakPlayer)
-            ? storedCurrentMulatschakPlayer!
-            : mulatschakPlayers.keys.first;
+        ? storedCurrentMulatschakPlayer!
+        : mulatschakPlayers.keys.first;
+    final currentHosnObePlayer =
+        hosnObePlayers.containsKey(storedCurrentHosnObePlayer)
+        ? storedCurrentHosnObePlayer!
+        : hosnObePlayers.keys.first;
     final appMode = _decodeAppMode(storedAppMode);
     final mulatschakMultiplier =
         storedMulatschakMultiplier != null && storedMulatschakMultiplier > 0
-            ? storedMulatschakMultiplier
-            : defaultMulatschakMultiplier;
+        ? storedMulatschakMultiplier
+        : defaultMulatschakMultiplier;
     final muleqackEnabled = storedMuleqackEnabled ?? defaultMuleqackEnabled;
     final muleqackTriggerPoints =
         storedMuleqackTriggerPoints != null && storedMuleqackTriggerPoints > 0
-            ? storedMuleqackTriggerPoints
-            : defaultMuleqackTriggerPoints;
+        ? storedMuleqackTriggerPoints
+        : defaultMuleqackTriggerPoints;
     final muleqackResetPoints =
         storedMuleqackResetPoints != null && storedMuleqackResetPoints >= 0
-            ? storedMuleqackResetPoints
-            : defaultMuleqackResetPoints;
+        ? storedMuleqackResetPoints
+        : defaultMuleqackResetPoints;
 
     return CounterStorageData(
       counters: counters,
@@ -125,6 +146,8 @@ class CounterStorageService {
       currentWattenGame: currentWattenGame,
       mulatschakPlayers: mulatschakPlayers,
       currentMulatschakPlayer: currentMulatschakPlayer,
+      hosnObePlayers: hosnObePlayers,
+      currentHosnObePlayer: currentHosnObePlayer,
       mulatschakMultiplier: mulatschakMultiplier,
       muleqackEnabled: muleqackEnabled,
       muleqackTriggerPoints: muleqackTriggerPoints,
@@ -140,6 +163,8 @@ class CounterStorageService {
     required String currentWattenGame,
     required Map<String, int> mulatschakPlayers,
     required String currentMulatschakPlayer,
+    required Map<String, int> hosnObePlayers,
+    required String currentHosnObePlayer,
     required int mulatschakMultiplier,
     required bool muleqackEnabled,
     required int muleqackTriggerPoints,
@@ -158,6 +183,8 @@ class CounterStorageService {
     await prefs.setString(_currentWattenGameKey, currentWattenGame);
     await prefs.setString(_mulatschakPlayersKey, jsonEncode(mulatschakPlayers));
     await prefs.setString(_currentMulatschakPlayerKey, currentMulatschakPlayer);
+    await prefs.setString(_hosnObePlayersKey, jsonEncode(hosnObePlayers));
+    await prefs.setString(_currentHosnObePlayerKey, currentHosnObePlayer);
     await prefs.setInt(_mulatschakMultiplierKey, mulatschakMultiplier);
     await prefs.setBool(_muleqackEnabledKey, muleqackEnabled);
     await prefs.setInt(_muleqackTriggerPointsKey, muleqackTriggerPoints);
@@ -208,9 +235,15 @@ class CounterStorageService {
 
       final games = decoded.map((key, value) {
         if (value is! Map<String, dynamic>) {
-          return MapEntry(_normalizeWattenGameName(key), const WattenGame(me: 0, you: 0));
+          return MapEntry(
+            _normalizeWattenGameName(key),
+            const WattenGame(me: 0, you: 0),
+          );
         }
-        return MapEntry(_normalizeWattenGameName(key), WattenGame.fromJson(value));
+        return MapEntry(
+          _normalizeWattenGameName(key),
+          WattenGame.fromJson(value),
+        );
       });
 
       if (games.isEmpty) {
