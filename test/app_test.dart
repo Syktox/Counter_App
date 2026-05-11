@@ -282,19 +282,51 @@ void main() {
         },
       );
 
-      expect(find.text('Current factor: 1x'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(DropdownButton<int>),
+          matching: find.text('1x'),
+        ),
+        findsOneWidget,
+      );
 
       await tester.tap(find.text('-1'));
       await tester.pumpAndSettle();
       expect(find.text('Player 1 wins'), findsOneWidget);
 
-      await tester.tap(find.text('4x'));
+      await tester.tap(find.byType(DropdownButton<int>));
       await tester.pumpAndSettle();
-      expect(find.text('Current factor: 4x'), findsOneWidget);
+      await tester.tap(find.text('4x').last);
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: find.byType(DropdownButton<int>),
+          matching: find.text('4x'),
+        ),
+        findsOneWidget,
+      );
 
       await tester.tap(find.text('+5'));
       await tester.pumpAndSettle();
       expect(find.text('20'), findsOneWidget);
+    });
+
+    testWidgets('clamps multiplier subtraction at zero', (tester) async {
+      await _pumpApp(
+        tester,
+        sharedPreferences: {
+          'app_mode': 'mulatschak',
+          'mulatschak_players': jsonEncode({'Player 1': 4, 'Player 2': 21}),
+          'current_mulatschak_player': 'Player 1',
+          'mulatschak_multiplier': 8,
+        },
+      );
+
+      await tester.tap(find.text('-1'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Player 1 wins'), findsOneWidget);
+      expect(find.text('0'), findsOneWidget);
     });
 
     testWidgets('supports adding, renaming and deleting players', (

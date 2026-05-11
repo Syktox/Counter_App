@@ -98,12 +98,19 @@ class _HomePageState extends State<HomePage> {
     for (final mode in AppMode.values) mode: <_HomePageSnapshot>[],
   };
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  final FocusNode _mulatschakMultiplierFocusNode = FocusNode();
   bool _isLoadingCounters = true;
 
   @override
   void initState() {
     super.initState();
     _loadCounters();
+  }
+
+  @override
+  void dispose() {
+    _mulatschakMultiplierFocusNode.dispose();
+    super.dispose();
   }
 
   Future<void> _loadCounters() async {
@@ -652,14 +659,11 @@ class _HomePageState extends State<HomePage> {
     final delta = baseDelta * mulatschakMultiplier;
     final rawNextValue = currentValue + delta;
 
-    if (rawNextValue < 0) {
-      return;
-    }
-
     _pushUndoSnapshot();
+    final clampedNextValue = rawNextValue < 0 ? 0 : rawNextValue;
     final nextValue = muleqackEnabled
-        ? _applyMuleqackReset(rawNextValue)
-        : rawNextValue;
+        ? _applyMuleqackReset(clampedNextValue)
+        : clampedNextValue;
 
     setState(() {
       mulatschakPlayers[currentMulatschakPlayer] = nextValue;
@@ -700,6 +704,19 @@ class _HomePageState extends State<HomePage> {
       mulatschakMultiplier = multiplier;
     });
     _saveCounters();
+  }
+
+  void _clearMulatschakMultiplierFocus() {
+    _mulatschakMultiplierFocusNode.unfocus();
+    FocusScope.of(context).unfocus();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+
+      _mulatschakMultiplierFocusNode.unfocus();
+      FocusScope.of(context).unfocus();
+    });
   }
 
   void _setMuleqackEnabled(bool enabled) {
@@ -1530,11 +1547,16 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildMulatschakPlayerCard(String playerName, int score) {
+  Widget _buildMulatschakPlayerCard(
+    String playerName,
+    int score, {
+    bool compact = false,
+  }) {
     final isSelected = playerName == currentMulatschakPlayer;
 
     return GestureDetector(
       onTap: () {
+        _clearMulatschakMultiplierFocus();
         setState(() {
           currentMulatschakPlayer = playerName;
         });
@@ -1542,13 +1564,14 @@ class _HomePageState extends State<HomePage> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        width: 180,
-        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+        padding: compact
+            ? const EdgeInsets.symmetric(vertical: 12, horizontal: 8)
+            : const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
         decoration: BoxDecoration(
           color: isSelected
               ? Colors.white.withValues(alpha: 0.18)
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(compact ? 16 : 20),
           border: Border.all(
             color: isSelected
                 ? Colors.white.withValues(alpha: 0.45)
@@ -1562,12 +1585,20 @@ class _HomePageState extends State<HomePage> {
             Text(
               playerName,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: compact ? 18 : 24,
+                fontWeight: FontWeight.w700,
+              ),
             ),
-            const SizedBox(height: 18),
+            SizedBox(height: compact ? 10 : 18),
             Text(
               '$score',
-              style: const TextStyle(fontSize: 64, fontWeight: FontWeight.w900),
+              style: TextStyle(
+                fontSize: compact ? 42 : 64,
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ],
         ),
@@ -1576,61 +1607,80 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildMulatschakMultiplierSelector() {
-    const baseMultipliers = [1, 2, 4, 8, 16];
-    const extraMultipliers = [32, 64, 128];
-    final dropdownValue = extraMultipliers.contains(mulatschakMultiplier)
-        ? mulatschakMultiplier
-        : extraMultipliers.first;
+    const multipliers = [1, 2, 4, 8, 16, 32, 64, 128];
 
-    return Wrap(
-      alignment: WrapAlignment.center,
-      spacing: 10,
-      runSpacing: 10,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: [
-        ...baseMultipliers.map((multiplier) {
-          final isSelected = mulatschakMultiplier == multiplier;
-          return ChoiceChip(
-            label: Text('${multiplier}x'),
-            selected: isSelected,
-            onSelected: (_) => _setMulatschakMultiplier(multiplier),
+    return SizedBox(
+      width: 76,
+      child: DropdownButton<int>(
+        focusNode: _mulatschakMultiplierFocusNode,
+        focusColor: Colors.transparent,
+        alignment: Alignment.center,
+        isExpanded: true,
+        menuWidth: 76,
+        value: multipliers.contains(mulatschakMultiplier)
+            ? mulatschakMultiplier
+            : multipliers.first,
+        borderRadius: BorderRadius.zero,
+        items: multipliers
+            .map(
+              (multiplier) => DropdownMenuItem<int>(
+                value: multiplier,
+                child: Center(child: Text('${multiplier}x')),
+              ),
+            )
+            .toList(),
+        onChanged: (value) {
+          if (value != null) {
+            _setMulatschakMultiplier(value);
+            _clearMulatschakMultiplierFocus();
+          }
+        },
+      ),
+    );
+  }
+
+  bool _isHandsetWidth(double width) {
+    final platform = defaultTargetPlatform;
+    final isMobilePlatform =
+        platform == TargetPlatform.android || platform == TargetPlatform.iOS;
+
+    return isMobilePlatform && width < 600;
+  }
+
+  Widget _buildMulatschakMultiplierRow() {
+    const label = Text(
+      'Multiplier',
+      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (_isHandsetWidth(constraints.maxWidth)) {
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              label,
+              _buildMulatschakMultiplierSelector(),
+            ],
           );
-        }),
-        DropdownButton<int>(
-          value: dropdownValue,
-          borderRadius: BorderRadius.circular(16),
-          items: extraMultipliers
-              .map(
-                (multiplier) => DropdownMenuItem<int>(
-                  value: multiplier,
-                  child: Text('${multiplier}x'),
-                ),
-              )
-              .toList(),
-          onChanged: (value) {
-            if (value != null) {
-              _setMulatschakMultiplier(value);
-            }
-          },
-        ),
-      ],
+        }
+
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            label,
+            const SizedBox(width: 16),
+            _buildMulatschakMultiplierSelector(),
+          ],
+        );
+      },
     );
   }
 
   Widget _buildMulatschakControls() {
     return Column(
       children: [
-        const Text(
-          'Multiplier',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-        ),
-        const SizedBox(height: 12),
-        _buildMulatschakMultiplierSelector(),
-        const SizedBox(height: 10),
-        Text(
-          'Current factor: ${mulatschakMultiplier}x',
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-        ),
+        _buildMulatschakMultiplierRow(),
         const SizedBox(height: 20),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -1664,12 +1714,59 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  bool _useHandsetMulatschakGrid(BoxConstraints constraints) {
+    return _isHandsetWidth(constraints.maxWidth);
+  }
+
+  Widget _buildMulatschakPlayersWrap(
+    List<MapEntry<String, int>> entries,
+  ) {
+    return SingleChildScrollView(
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        spacing: 12,
+        runSpacing: 12,
+        children: entries
+            .map(
+              (entry) => SizedBox(
+                width: 180,
+                child: _buildMulatschakPlayerCard(entry.key, entry.value),
+              ),
+            )
+            .toList(),
+      ),
+    );
+  }
+
+  Widget _buildMulatschakPlayersGrid(
+    List<MapEntry<String, int>> entries,
+  ) {
+    final columnCount = entries.length >= 3 ? 3 : entries.length;
+
+    return GridView.count(
+      crossAxisCount: columnCount,
+      mainAxisSpacing: 10,
+      crossAxisSpacing: 10,
+      childAspectRatio: 0.68,
+      children: entries
+          .map(
+            (entry) => _buildMulatschakPlayerCard(
+              entry.key,
+              entry.value,
+              compact: true,
+            ),
+          )
+          .toList(),
+    );
+  }
+
   Widget _buildMulatschakBody() {
     if (_isLoadingCounters) {
       return const Center(child: CircularProgressIndicator());
     }
 
     final winner = _mulatschakWinner();
+    final entries = mulatschakPlayers.entries.toList();
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
@@ -1698,18 +1795,15 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           Expanded(
-            child: SingleChildScrollView(
-              child: Wrap(
-                alignment: WrapAlignment.center,
-                spacing: 12,
-                runSpacing: 12,
-                children: mulatschakPlayers.entries
-                    .map(
-                      (entry) =>
-                          _buildMulatschakPlayerCard(entry.key, entry.value),
-                    )
-                    .toList(),
-              ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                if (_useHandsetMulatschakGrid(constraints) &&
+                    entries.length >= 2) {
+                  return _buildMulatschakPlayersGrid(entries);
+                }
+
+                return _buildMulatschakPlayersWrap(entries);
+              },
             ),
           ),
           const SizedBox(height: 20),
