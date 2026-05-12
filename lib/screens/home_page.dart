@@ -98,7 +98,6 @@ class _HomePageState extends State<HomePage> {
     for (final mode in AppMode.values) mode: <_HomePageSnapshot>[],
   };
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  final FocusNode _mulatschakMultiplierFocusNode = FocusNode();
   bool _isLoadingCounters = true;
 
   @override
@@ -109,7 +108,6 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
-    _mulatschakMultiplierFocusNode.dispose();
     super.dispose();
   }
 
@@ -704,19 +702,6 @@ class _HomePageState extends State<HomePage> {
       mulatschakMultiplier = multiplier;
     });
     _saveCounters();
-  }
-
-  void _clearMulatschakMultiplierFocus() {
-    _mulatschakMultiplierFocusNode.unfocus();
-    FocusScope.of(context).unfocus();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) {
-        return;
-      }
-
-      _mulatschakMultiplierFocusNode.unfocus();
-      FocusScope.of(context).unfocus();
-    });
   }
 
   void _setMuleqackEnabled(bool enabled) {
@@ -1556,7 +1541,7 @@ class _HomePageState extends State<HomePage> {
 
     return GestureDetector(
       onTap: () {
-        _clearMulatschakMultiplierFocus();
+        FocusScope.of(context).unfocus();
         setState(() {
           currentMulatschakPlayer = playerName;
         });
@@ -1608,33 +1593,44 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildMulatschakMultiplierSelector() {
     const multipliers = [1, 2, 4, 8, 16, 32, 64, 128];
+    final colorScheme = Theme.of(context).colorScheme;
 
     return SizedBox(
       width: 76,
-      child: DropdownButton<int>(
-        focusNode: _mulatschakMultiplierFocusNode,
-        focusColor: Colors.transparent,
-        alignment: Alignment.center,
-        isExpanded: true,
-        menuWidth: 76,
-        value: multipliers.contains(mulatschakMultiplier)
+      child: PopupMenuButton<int>(
+        key: const Key('mulatschakMultiplierButton'),
+        tooltip: 'Multiplier',
+        initialValue: multipliers.contains(mulatschakMultiplier)
             ? mulatschakMultiplier
-            : multipliers.first,
-        borderRadius: BorderRadius.zero,
-        items: multipliers
+            : null,
+        constraints: const BoxConstraints.tightFor(width: 76),
+        position: PopupMenuPosition.under,
+        onSelected: _setMulatschakMultiplier,
+        itemBuilder: (context) => multipliers
             .map(
-              (multiplier) => DropdownMenuItem<int>(
+              (multiplier) => PopupMenuItem<int>(
                 value: multiplier,
+                height: 44,
                 child: Center(child: Text('${multiplier}x')),
               ),
             )
             .toList(),
-        onChanged: (value) {
-          if (value != null) {
-            _setMulatschakMultiplier(value);
-            _clearMulatschakMultiplierFocus();
-          }
-        },
+        child: Container(
+          height: 48,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            border: Border.all(color: Theme.of(context).dividerColor),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            '${mulatschakMultiplier}x',
+            style: TextStyle(
+              color: colorScheme.onSurface,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
       ),
     );
   }

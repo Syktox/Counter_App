@@ -284,7 +284,7 @@ void main() {
 
       expect(
         find.descendant(
-          of: find.byType(DropdownButton<int>),
+          of: find.byKey(const Key('mulatschakMultiplierButton')),
           matching: find.text('1x'),
         ),
         findsOneWidget,
@@ -294,13 +294,14 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Player 1 wins'), findsOneWidget);
 
-      await tester.tap(find.byType(DropdownButton<int>));
+      await tester.tap(find.byKey(const Key('mulatschakMultiplierButton')));
       await tester.pumpAndSettle();
+      expect(find.text('128x'), findsOneWidget);
       await tester.tap(find.text('4x').last);
       await tester.pumpAndSettle();
       expect(
         find.descendant(
-          of: find.byType(DropdownButton<int>),
+          of: find.byKey(const Key('mulatschakMultiplierButton')),
           matching: find.text('4x'),
         ),
         findsOneWidget,
