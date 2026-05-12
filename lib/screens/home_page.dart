@@ -1832,7 +1832,7 @@ class _HomePageState extends State<HomePage> {
             ? mulatschakMultiplier
             : null,
         constraints: const BoxConstraints.tightFor(width: 76),
-        position: PopupMenuPosition.under,
+        position: PopupMenuPosition.over,
         onSelected: _setMulatschakMultiplier,
         itemBuilder: (context) => multipliers
             .map(
