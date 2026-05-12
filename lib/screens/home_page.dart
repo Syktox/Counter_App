@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'dart:convert';
 import 'dart:collection';
 import '../models/app_mode.dart';
 import '../models/watten_game.dart';
@@ -26,6 +27,10 @@ class _HomePageSnapshot {
   final int muleqackResetPoints;
   final bool counterHistoryEnabled;
   final Map<String, List<String>> counterHistory;
+  final bool mulatschakHistoryEnabled;
+  final List<String> mulatschakHistory;
+  final int mulatschakHistoryRound;
+  final Set<String> mulatschakRoundPlayers;
   final AppMode appMode;
 
   const _HomePageSnapshot({
@@ -44,7 +49,25 @@ class _HomePageSnapshot {
     required this.muleqackResetPoints,
     required this.counterHistoryEnabled,
     required this.counterHistory,
+    required this.mulatschakHistoryEnabled,
+    required this.mulatschakHistory,
+    required this.mulatschakHistoryRound,
+    required this.mulatschakRoundPlayers,
     required this.appMode,
+  });
+}
+
+class _MulatschakHistoryEntry {
+  final int round;
+  final String time;
+  final String playerName;
+  final int points;
+
+  const _MulatschakHistoryEntry({
+    required this.round,
+    required this.time,
+    required this.playerName,
+    required this.points,
   });
 }
 
@@ -94,6 +117,12 @@ class _HomePageState extends State<HomePage> {
   bool counterHistoryEnabled =
       CounterStorageService.defaultCounterHistoryEnabled;
   Map<String, List<String>> counterHistory = {};
+  bool mulatschakHistoryEnabled =
+      CounterStorageService.defaultMulatschakHistoryEnabled;
+  List<String> mulatschakHistory = [];
+  int mulatschakHistoryRound =
+      CounterStorageService.defaultMulatschakHistoryRound;
+  Set<String> mulatschakRoundPlayers = {};
   final Map<AppMode, List<_HomePageSnapshot>> _undoStacks = {
     for (final mode in AppMode.values) mode: <_HomePageSnapshot>[],
   };
@@ -133,6 +162,12 @@ class _HomePageState extends State<HomePage> {
       muleqackResetPoints = storedData.muleqackResetPoints;
       counterHistoryEnabled = storedData.counterHistoryEnabled;
       counterHistory = _copyCounterHistory(storedData.counterHistory);
+      mulatschakHistoryEnabled = storedData.mulatschakHistoryEnabled;
+      mulatschakHistory = List<String>.from(storedData.mulatschakHistory);
+      mulatschakHistoryRound = storedData.mulatschakHistoryRound;
+      mulatschakRoundPlayers = Set<String>.from(
+        storedData.mulatschakRoundPlayers,
+      );
       _isLoadingCounters = false;
     });
   }
@@ -153,6 +188,10 @@ class _HomePageState extends State<HomePage> {
       muleqackResetPoints: muleqackResetPoints,
       counterHistoryEnabled: counterHistoryEnabled,
       counterHistory: counterHistory,
+      mulatschakHistoryEnabled: mulatschakHistoryEnabled,
+      mulatschakHistory: mulatschakHistory,
+      mulatschakHistoryRound: mulatschakHistoryRound,
+      mulatschakRoundPlayers: mulatschakRoundPlayers.toList(),
       appMode: appMode ?? widget.appMode,
     );
   }
@@ -174,6 +213,10 @@ class _HomePageState extends State<HomePage> {
       muleqackResetPoints: muleqackResetPoints,
       counterHistoryEnabled: counterHistoryEnabled,
       counterHistory: _copyCounterHistory(counterHistory),
+      mulatschakHistoryEnabled: mulatschakHistoryEnabled,
+      mulatschakHistory: List<String>.from(mulatschakHistory),
+      mulatschakHistoryRound: mulatschakHistoryRound,
+      mulatschakRoundPlayers: Set<String>.from(mulatschakRoundPlayers),
       appMode: widget.appMode,
     );
   }
@@ -219,6 +262,12 @@ class _HomePageState extends State<HomePage> {
         muleqackEnabled = snapshot.muleqackEnabled;
         muleqackTriggerPoints = snapshot.muleqackTriggerPoints;
         muleqackResetPoints = snapshot.muleqackResetPoints;
+        mulatschakHistoryEnabled = snapshot.mulatschakHistoryEnabled;
+        mulatschakHistory = List<String>.from(snapshot.mulatschakHistory);
+        mulatschakHistoryRound = snapshot.mulatschakHistoryRound;
+        mulatschakRoundPlayers = Set<String>.from(
+          snapshot.mulatschakRoundPlayers,
+        );
       case AppMode.hosnObe:
         hosnObePlayers = LinkedHashMap<String, int>.from(
           snapshot.hosnObePlayers,
@@ -297,6 +346,74 @@ class _HomePageState extends State<HomePage> {
     String twoDigits(int value) => value.toString().padLeft(2, '0');
 
     return '${twoDigits(time.hour)}:${twoDigits(time.minute)}:${twoDigits(time.second)}';
+  }
+
+  String _formatSignedPoints(int points) {
+    return points > 0 ? '+$points' : '$points';
+  }
+
+  String _encodeMulatschakHistoryEntry(_MulatschakHistoryEntry entry) {
+    return jsonEncode({
+      'round': entry.round,
+      'time': entry.time,
+      'player': entry.playerName,
+      'points': entry.points,
+    });
+  }
+
+  _MulatschakHistoryEntry? _decodeMulatschakHistoryEntry(String entry) {
+    try {
+      final decoded = jsonDecode(entry);
+      if (decoded is! Map<String, dynamic>) {
+        return null;
+      }
+
+      final round = decoded['round'];
+      final time = decoded['time'];
+      final playerName = decoded['player'];
+      final points = decoded['points'];
+
+      if (round is int &&
+          time is String &&
+          playerName is String &&
+          points is int) {
+        return _MulatschakHistoryEntry(
+          round: round,
+          time: time,
+          playerName: playerName,
+          points: points,
+        );
+      }
+    } catch (_) {
+      return null;
+    }
+
+    return null;
+  }
+
+  void _recordMulatschakHistory(String playerName, int points) {
+    if (!mulatschakHistoryEnabled || points == 0) {
+      return;
+    }
+
+    mulatschakHistory = [
+      ...mulatschakHistory,
+      _encodeMulatschakHistoryEntry(
+        _MulatschakHistoryEntry(
+          round: mulatschakHistoryRound,
+          time: _formatHistoryTime(DateTime.now()),
+          playerName: playerName,
+          points: points,
+        ),
+      ),
+    ];
+
+    mulatschakRoundPlayers = Set<String>.from(mulatschakRoundPlayers)
+      ..add(playerName);
+    if (mulatschakRoundPlayers.length >= mulatschakPlayers.length) {
+      mulatschakHistoryRound += 1;
+      mulatschakRoundPlayers = {};
+    }
   }
 
   void _selectCounter(String counter) {
@@ -427,6 +544,10 @@ class _HomePageState extends State<HomePage> {
       );
       if (currentMulatschakPlayer == oldName) {
         currentMulatschakPlayer = newName;
+      }
+      if (mulatschakRoundPlayers.remove(oldName)) {
+        mulatschakRoundPlayers = Set<String>.from(mulatschakRoundPlayers)
+          ..add(newName);
       }
     });
     _saveCounters();
@@ -576,6 +697,7 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       mulatschakPlayers[playerName] = 21;
       currentMulatschakPlayer = playerName;
+      mulatschakRoundPlayers.remove(playerName);
     });
     _saveCounters();
   }
@@ -601,6 +723,11 @@ class _HomePageState extends State<HomePage> {
     _pushUndoSnapshot();
     setState(() {
       mulatschakPlayers.remove(playerName);
+      mulatschakRoundPlayers.remove(playerName);
+      if (mulatschakRoundPlayers.length >= mulatschakPlayers.length) {
+        mulatschakHistoryRound += 1;
+        mulatschakRoundPlayers = {};
+      }
       if (currentMulatschakPlayer == playerName) {
         currentMulatschakPlayer = mulatschakPlayers.keys.first;
       }
@@ -653,7 +780,8 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _updateMulatschakScore(int baseDelta) {
-    final currentValue = mulatschakPlayers[currentMulatschakPlayer]!;
+    final playerName = currentMulatschakPlayer;
+    final currentValue = mulatschakPlayers[playerName]!;
     final delta = baseDelta * mulatschakMultiplier;
     final rawNextValue = currentValue + delta;
 
@@ -664,7 +792,8 @@ class _HomePageState extends State<HomePage> {
         : clampedNextValue;
 
     setState(() {
-      mulatschakPlayers[currentMulatschakPlayer] = nextValue;
+      mulatschakPlayers[playerName] = nextValue;
+      _recordMulatschakHistory(playerName, nextValue - currentValue);
     });
     _saveCounters();
   }
@@ -687,7 +816,11 @@ class _HomePageState extends State<HomePage> {
   void _resetMulatschakPlayers() {
     _pushUndoSnapshot();
     setState(() {
-      mulatschakPlayers.updateAll((key, value) => 21);
+      mulatschakPlayers.updateAll((playerName, value) {
+        const resetValue = 21;
+        _recordMulatschakHistory(playerName, resetValue - value);
+        return resetValue;
+      });
     });
     _saveCounters();
   }
@@ -748,6 +881,18 @@ class _HomePageState extends State<HomePage> {
     _pushUndoSnapshot();
     setState(() {
       counterHistoryEnabled = enabled;
+    });
+    _saveCounters();
+  }
+
+  void _setMulatschakHistoryEnabled(bool enabled) {
+    if (mulatschakHistoryEnabled == enabled) {
+      return;
+    }
+
+    _pushUndoSnapshot();
+    setState(() {
+      mulatschakHistoryEnabled = enabled;
     });
     _saveCounters();
   }
@@ -1205,6 +1350,17 @@ class _HomePageState extends State<HomePage> {
               tooltip: 'Counter history',
             ),
           ),
+        if (widget.appMode == AppMode.mulatschak && mulatschakHistoryEnabled)
+          Padding(
+            padding: const EdgeInsets.only(right: 4),
+            child: IconButton(
+              icon: const Icon(Icons.history),
+              onPressed: () {
+                _scaffoldKey.currentState?.openEndDrawer();
+              },
+              tooltip: 'Mulatschak history',
+            ),
+          ),
         Padding(
           padding: const EdgeInsets.only(right: 4),
           child: IconButton(
@@ -1321,10 +1477,13 @@ class _HomePageState extends State<HomePage> {
               muleqackTriggerPoints: muleqackTriggerPoints,
               muleqackResetPoints: muleqackResetPoints,
               counterHistoryEnabled: counterHistoryEnabled,
+              mulatschakHistoryEnabled: mulatschakHistoryEnabled,
               onMuleqackEnabledChanged: _setMuleqackEnabled,
               onMuleqackTriggerPointsChanged: _setMuleqackTriggerPoints,
               onMuleqackResetPointsChanged: _setMuleqackResetPoints,
               onCounterHistoryEnabledChanged: _setCounterHistoryEnabled,
+              onMulatschakHistoryEnabledChanged:
+                  _setMulatschakHistoryEnabled,
             ),
           ),
         );
@@ -1354,6 +1513,75 @@ class _HomePageState extends State<HomePage> {
                       separatorBuilder: (context, index) => const Divider(),
                       itemBuilder: (context, index) {
                         return ListTile(title: Text(currentHistory[index]));
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMulatschakHistoryDrawer() {
+    final entries = mulatschakHistory
+        .map(_decodeMulatschakHistoryEntry)
+        .whereType<_MulatschakHistoryEntry>()
+        .toList();
+    final rounds = SplayTreeMap<int, List<_MulatschakHistoryEntry>>(
+      (left, right) => right.compareTo(left),
+    );
+
+    for (final entry in entries) {
+      rounds.putIfAbsent(entry.round, () => []).add(entry);
+    }
+
+    return Drawer(
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const ListTile(
+              leading: Icon(Icons.history),
+              title: Text('Mulatschak history'),
+              subtitle: Text('Player changes by round'),
+            ),
+            const Divider(),
+            Expanded(
+              child: rounds.isEmpty
+                  ? const Center(child: Text('No player changes yet.'))
+                  : ListView.separated(
+                      itemCount: rounds.length,
+                      separatorBuilder: (context, index) => const Divider(),
+                      itemBuilder: (context, index) {
+                        final roundEntry = rounds.entries.elementAt(index);
+                        final roundEntries = roundEntry.value.reversed.toList();
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                              child: Text(
+                                'Round ${roundEntry.key}',
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                            ...roundEntries.map(
+                              (entry) => ListTile(
+                                dense: true,
+                                title: Text(entry.playerName),
+                                subtitle: Text(entry.time),
+                                trailing: Text(
+                                  '${_formatSignedPoints(entry.points)} points',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
                       },
                     ),
             ),
@@ -1944,6 +2172,8 @@ class _HomePageState extends State<HomePage> {
       drawer: _buildDrawer(),
       endDrawer: widget.appMode == AppMode.counter && counterHistoryEnabled
           ? _buildHistoryDrawer()
+          : widget.appMode == AppMode.mulatschak && mulatschakHistoryEnabled
+          ? _buildMulatschakHistoryDrawer()
           : null,
       drawerEdgeDragWidth: isMobileDrawerGesture ? screenWidth * 0.5 : null,
       body: widget.appMode == AppMode.watten

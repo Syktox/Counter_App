@@ -10,10 +10,12 @@ class SettingsPage extends StatefulWidget {
   final int muleqackTriggerPoints;
   final int muleqackResetPoints;
   final bool counterHistoryEnabled;
+  final bool mulatschakHistoryEnabled;
   final ValueChanged<bool> onMuleqackEnabledChanged;
   final ValueChanged<int> onMuleqackTriggerPointsChanged;
   final ValueChanged<int> onMuleqackResetPointsChanged;
   final ValueChanged<bool> onCounterHistoryEnabledChanged;
+  final ValueChanged<bool> onMulatschakHistoryEnabledChanged;
 
   const SettingsPage({
     super.key,
@@ -25,10 +27,12 @@ class SettingsPage extends StatefulWidget {
     required this.muleqackTriggerPoints,
     required this.muleqackResetPoints,
     required this.counterHistoryEnabled,
+    required this.mulatschakHistoryEnabled,
     required this.onMuleqackEnabledChanged,
     required this.onMuleqackTriggerPointsChanged,
     required this.onMuleqackResetPointsChanged,
     required this.onCounterHistoryEnabledChanged,
+    required this.onMulatschakHistoryEnabledChanged,
   });
 
   @override
@@ -42,6 +46,7 @@ class _SettingsPageState extends State<SettingsPage> {
   late int _muleqackTriggerPoints;
   late int _muleqackResetPoints;
   late bool _counterHistoryEnabled;
+  late bool _mulatschakHistoryEnabled;
 
   @override
   void initState() {
@@ -50,6 +55,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _muleqackTriggerPoints = widget.muleqackTriggerPoints;
     _muleqackResetPoints = widget.muleqackResetPoints;
     _counterHistoryEnabled = widget.counterHistoryEnabled;
+    _mulatschakHistoryEnabled = widget.mulatschakHistoryEnabled;
     _triggerController = TextEditingController(
       text: _muleqackTriggerPoints.toString(),
     );
@@ -82,6 +88,11 @@ class _SettingsPageState extends State<SettingsPage> {
 
     if (oldWidget.counterHistoryEnabled != widget.counterHistoryEnabled) {
       _counterHistoryEnabled = widget.counterHistoryEnabled;
+    }
+
+    if (oldWidget.mulatschakHistoryEnabled !=
+        widget.mulatschakHistoryEnabled) {
+      _mulatschakHistoryEnabled = widget.mulatschakHistoryEnabled;
     }
   }
 
@@ -183,6 +194,20 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ],
           if (showMuleqackSettings) ...[
+            const Divider(),
+            SwitchListTile(
+              title: const Text('Mulatschak history'),
+              subtitle: const Text(
+                'Shows a history button with the latest player changes.',
+              ),
+              value: _mulatschakHistoryEnabled,
+              onChanged: (value) {
+                setState(() {
+                  _mulatschakHistoryEnabled = value;
+                });
+                widget.onMulatschakHistoryEnabledChanged(value);
+              },
+            ),
             const Divider(),
             SwitchListTile(
               title: const Text('Mulatschak reset'),

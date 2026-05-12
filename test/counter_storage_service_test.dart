@@ -33,6 +33,16 @@ void main() {
         CounterStorageService.defaultCounterHistoryEnabled,
       );
       expect(data.counterHistory, isEmpty);
+      expect(
+        data.mulatschakHistoryEnabled,
+        CounterStorageService.defaultMulatschakHistoryEnabled,
+      );
+      expect(data.mulatschakHistory, isEmpty);
+      expect(
+        data.mulatschakHistoryRound,
+        CounterStorageService.defaultMulatschakHistoryRound,
+      );
+      expect(data.mulatschakRoundPlayers, isEmpty);
       expect(data.appMode, AppMode.counter);
     });
 
@@ -56,6 +66,12 @@ void main() {
         counterHistory: const {
           'Focus': ['14:30:21 - increased.'],
         },
+        mulatschakHistoryEnabled: true,
+        mulatschakHistory: const [
+          '{"round":1,"time":"14:31:00","player":"Anna","points":-4}',
+        ],
+        mulatschakHistoryRound: 2,
+        mulatschakRoundPlayers: const ['Ben'],
         appMode: AppMode.mulatschak,
       );
 
@@ -78,6 +94,12 @@ void main() {
       expect(data.counterHistory, {
         'Focus': ['14:30:21 - increased.'],
       });
+      expect(data.mulatschakHistoryEnabled, isTrue);
+      expect(data.mulatschakHistory, [
+        '{"round":1,"time":"14:31:00","player":"Anna","points":-4}',
+      ]);
+      expect(data.mulatschakHistoryRound, 2);
+      expect(data.mulatschakRoundPlayers, ['Ben']);
       expect(data.appMode, AppMode.mulatschak);
     });
 
@@ -101,6 +123,12 @@ void main() {
         'counter_history': jsonEncode({
           'Counter': ['14:30:21 - Counter increased.'],
         }),
+        'mulatschak_history_enabled': true,
+        'mulatschak_history': jsonEncode([
+          '{"round":1,"time":"14:31:00","player":"Player 1","points":-1}',
+        ]),
+        'mulatschak_history_round': 3,
+        'mulatschak_round_players': jsonEncode(['Player 1', 'Nobody']),
         'app_mode': 'unknown-mode',
       });
 
@@ -142,6 +170,12 @@ void main() {
       expect(data.counterHistory, {
         'Counter': ['14:30:21 - Counter increased.'],
       });
+      expect(data.mulatschakHistoryEnabled, isTrue);
+      expect(data.mulatschakHistory, [
+        '{"round":1,"time":"14:31:00","player":"Player 1","points":-1}',
+      ]);
+      expect(data.mulatschakHistoryRound, 3);
+      expect(data.mulatschakRoundPlayers, ['Player 1']);
       expect(data.appMode, CounterStorageService.defaultAppMode);
     });
 

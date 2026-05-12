@@ -330,6 +330,48 @@ void main() {
       expect(find.text('0'), findsOneWidget);
     });
 
+    testWidgets('shows mulatschak history grouped by completed rounds', (
+      tester,
+    ) async {
+      await _pumpApp(
+        tester,
+        sharedPreferences: {
+          'app_mode': 'mulatschak',
+          'mulatschak_players': jsonEncode({'Player 1': 21, 'Player 2': 21}),
+          'current_mulatschak_player': 'Player 1',
+        },
+      );
+
+      await _openSettings(tester);
+      await tester.tap(find.text('Mulatschak history'));
+      await tester.pumpAndSettle();
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('-1'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Player 2'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('+1'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Player 1'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('+1'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Mulatschak history'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Round 2'), findsOneWidget);
+      expect(find.text('Round 1'), findsOneWidget);
+      expect(find.text('Player 1'), findsWidgets);
+      expect(find.text('Player 2'), findsWidgets);
+      expect(find.text('-1 points'), findsOneWidget);
+      expect(find.text('+1 points'), findsNWidgets(2));
+    });
+
     testWidgets('supports adding, renaming and deleting players', (
       tester,
     ) async {
